@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1117">
+<title>월세관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --surface2: #e8edf8;
+  --border: #d0d8ee;
+  --accent: #2563eb;
+  --green: #059669;
+  --red: #dc2626;
+  --yellow: #d97706;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --font: 'Noto Sans KR', sans-serif;
+  --tab-h: 64px;
+  --top-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--top-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  z-index: 100;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07);
+}
+.topbar-title { font-size: 18px; font-weight: 900; color: var(--text); flex: 1; }
+.topbar-sub { font-size: 12px; color: var(--text2); }
+.topbar-btn {
+  background: var(--accent); color: white;
+  border: none; border-radius: 10px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700;
+  font-family: var(--font); cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Scroll Area ── */
+.scroll-area {
+  position: fixed;
+  top: var(--top-h);
+  left: 0; right: 0;
+  bottom: calc(var(--tab-h) + var(--safe-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 14px;
+}
+
+/* ── Bottom Tab Bar ── */
+.tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.07);
+}
+.tab-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; cursor: pointer;
+  border: none; background: none;
+  padding: 8px 0;
+  transition: all .15s;
+}
+.tab-icon { font-size: 22px; line-height: 1; }
+.tab-label { font-size: 10px; color: var(--text2); font-family: var(--font); font-weight: 500; }
+.tab-item.active .tab-label { color: var(--accent); font-weight: 700; }
+.tab-item.active .tab-icon { transform: scale(1.1); }
+
+/* ── Pages ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── Cards (2-col grid) ── */
+.cards-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.card::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; }
+.card.blue::before { background: var(--accent); }
+.card.green::before { background: var(--green); }
+.card.red::before { background: var(--red); }
+.card.yellow::before { background: var(--yellow); }
+.card-label { font-size: 10px; color: var(--text3); margin-bottom: 6px; letter-spacing:.5px; }
+.card-value { font-size: 22px; font-weight: 900; }
+.card-value.blue { color: var(--accent); }
+.card-value.green { color: var(--green); }
+.card-value.red { color: var(--red); }
+.card-value.yellow { color: var(--yellow); font-size: 15px; }
+.card-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 13px; font-weight: 700; color: var(--text2);
+  margin-bottom: 10px; margin-top: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ── List items (tenant payment rows) ── */
+.list-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.list-item-left { flex: 1; min-width: 0; }
+.list-item-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.list-item-sub { font-size: 12px; color: var(--text2); }
+.list-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.list-item-amount { font-size: 14px; font-weight: 700; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.badge.paid   { background: rgba(5,150,105,.12); color: var(--green); border: 1px solid rgba(5,150,105,.25); }
+.badge.unpaid { background: rgba(220,38,38,.10); color: var(--red); border: 1px solid rgba(220,38,38,.25); }
+.dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+/* ── Month nav ── */
+.month-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 16px; margin-bottom: 12px;
+}
+.month-row span { font-size: 16px; font-weight: 900; }
+.month-nav-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; width: 36px; height: 36px;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Filter chips ── */
+.chips { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text2); border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  font-family: var(--font);
+}
+.chip.active { background: rgba(37,99,235,.12); border-color: var(--accent); color: var(--accent); }
+
+/* ── Pay row action ── */
+.pay-action {
+  background: rgba(220,38,38,.10); color: var(--red);
+  border: 1px solid rgba(220,38,38,.35);
+  border-radius: 8px; padding: 6px 12px;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--font);
+  white-space: nowrap;
+}
+.pay-done {
+  background: none; color: var(--text3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: 11px; font-family: var(--font);
+}
+
+/* ── Log form ── */
+.log-form {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px; margin-bottom: 14px;
+}
+.form-group { margin-bottom: 12px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; display: block; font-weight: 600; }
+.form-input {
+  width: 100%; background: #f8faff; border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 13px; color: var(--text);
+  font-size: 15px; font-family: var(--font); outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn-full {
+  width: 100%; background: var(--accent); color: white;
+  border: none; border-radius: 12px; padding: 14px;
+  font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer;
+  margin-top: 12px;
+}
+.btn-full.red { background: var(--red); color: white; }
+
+/* ── Tenant cards ── */
+.tenant-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px; margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.tc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.tc-name { font-size: 17px; font-weight: 900; }
+.tc-building { font-size: 11px; color: var(--accent); background: rgba(79,142,247,.1); padding: 3px 9px; border-radius: 20px; }
+.tc-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.tc-row:last-of-type { border-bottom: none; }
+.tc-key { font-size: 12px; color: var(--text2); }
+.tc-val { font-size: 13px; font-weight: 600; text-align: right; }
+.tc-actions { display: flex; gap: 8px; margin-top: 12px; }
+.tc-btn {
+  flex: 1; border-radius: 10px; padding: 10px;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font);
+  border: none;
+}
+.tc-btn.edit { background: rgba(37,99,235,.10); color: var(--accent); border: 1px solid rgba(37,99,235,.25); }
+.tc-btn.del  { background: rgba(220,38,38,.08); color: var(--red); border: 1px solid rgba(220,38,38,.2); }
+
+/* ── Log list ── */
+.log-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.log-item-main { flex: 1; }
+.log-item-name { font-size: 14px; font-weight: 700; }
+.log-item-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.log-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.log-amount { font-size: 15px; font-weight: 900; color: var(--green); }
+.log-del { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; }
+
+/* ── Yearly ── */
+.yearly-row {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px; margin-bottom: 8px;
+}
+.yr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.yr-name { font-size: 15px; font-weight: 700; }
+.yr-total { font-size: 15px; font-weight: 900; color: var(--yellow); }
+.yr-months { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; }
+.yr-month { text-align: center; }
+.yr-month-label { font-size: 9px; color: var(--text3); }
+.yr-month-val { font-size: 10px; font-weight: 700; margin-top: 2px; }
+.yr-month-val.has { color: var(--green); }
+.yr-month-val.rf  { color: var(--green); font-size: 9px; }
+.yr-month-val.no  { color: var(--text3); }
+
+/* ── Bottom Sheet Modal ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); z-index: 200;
+  align-items: flex-end;
+}
+.overlay.show { display: flex; }
+.sheet {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-height: 90vh;
+  overflow-y: auto;
+  padding: 0 16px calc(20px + var(--safe-bottom));
+  animation: slideUp .22s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 12px auto 16px;
+}
+.sheet-title { font-size: 18px; font-weight: 900; margin-bottom: 18px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: calc(var(--tab-h) + 12px + var(--safe-bottom)); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--green); color: #ffffff;
+  padding: 11px 22px; border-radius: 24px;
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+  opacity: 0; transition: all .25s; z-index: 300; pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Empty state ── */
+.empty {
+  text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px;
+}
+
+/* ── Search ── */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 13px 11px 38px;
+  color: var(--text); font-size: 14px; font-family: var(--font); outline: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.search-input:focus { border-color: var(--accent); }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; }
+
+
+/* ── History Year Sections ── */
+.hist-year-section {
+  margin-bottom: 14px;
+}
+.hist-year-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.hist-year-label {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+}
+.hist-year-stat {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.hist-year-stat.all-paid   { background: rgba(5,150,105,.12); color: var(--green); }
+.hist-year-stat.all-unpaid { background: rgba(220,38,38,.10); color: var(--red); }
+.hist-year-stat.partial    { background: rgba(217,119,6,.12); color: var(--yellow); }
+
+/* ── History Modal ── */
+.hist-grid {
+  display: grid;
+  grid-template-columns: repeat(6,1fr);
+  gap: 5px;
+  margin: 8px 0;
+}
+.hist-cell-label { font-size: 11px; font-weight: 800; }
+.hist-cell-icon  { font-size: 16px; font-weight: 900; }
+.hist-streak-box {
+  background: #f8faff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.hist-summary-box {
+  background: #f8faff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+/* Number input formatting */
+.num-input-wrap { position: relative; }
+.num-input-display {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  font-size: 15px; color: var(--text); pointer-events: none;
+}
+</style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar" id="topbar">
+  <div class="topbar-title" id="topbar-title">🏠 월세관리</div>
+  <div class="topbar-sub" id="topbar-sub"></div>
+  <button class="topbar-btn" id="topbar-action" style="display:none"></button>
+</div>
+
+<!-- Scroll Area -->
+<div class="scroll-area" id="scroll-area">
+
+  <!-- ── 대시보드 ── -->
+  <div id="page-dashboard" class="page active">
+    <div class="cards-2">
+      <div class="card blue">
+        <div class="card-label">전체 세입자</div>
+        <div class="card-value blue">11명</div>
+        <div class="card-sub" id="d-building-sub">계산중</div>
+      </div>
+      <div class="card yellow">
+        <div class="card-label">이번달 목표</div>
+        <div class="card-value yellow" id="d-target">계산중</div>
+        <div class="card-sub">월세+관리비</div>
+      </div>
+      <div class="card green">
+        <div class="card-label">납부완료</div>
+        <div class="card-value green" id="d-paid">0명</div>
+        <div class="card-sub" id="d-paid-amt">₩0</div>
+      </div>
+      <div class="card red">
+        <div class="card-label">미납</div>
+        <div class="card-value red" id="d-unpaid">11명</div>
+        <div class="card-sub" id="d-unpaid-sub">확인필요</div>
+      </div>
+    </div>
+
+    <div class="section-title">최근 입금 기록</div>
+    <div id="d-log-list"><div class="empty">입금 기록이 없습니다</div></div>
+
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button onclick="exportData()" style="flex:1;padding:13px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;-webkit-text-fill-color:#fff;font-size:14px;font-weight:800;cursor:pointer;">📤 내보내기</button>
+      <button onclick="document.getElementById('import-file').click()" style="flex:1;padding:13px;border-radius:12px;border:none;background:#059669;color:#fff;-webkit-text-fill-color:#fff;font-size:14px;font-weight:800;cursor:pointer;">📥 불러오기</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:6px;">내보내기 → JSON 파일을 다른 기기에서 불러오기 하면 데이터가 동기화됩니다</div>
+  </div>
+
+  <!-- ── 납부현황 ── -->
+  <div id="page-monthly" class="page">
+    <div class="month-row">
+      <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <span id="month-label"></span>
+      <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="chips" id="monthly-chips">
+      <div class="chip active" onclick="filterMonthly('all',this)">전체</div>
+
+      <div class="chip" onclick="filterMonthly('미납',this)">미납만</div>
+    </div>
+    <div id="monthly-list"></div>
+  </div>
+
+  <!-- ── 입금기록 ── -->
+  <div id="page-log" class="page">
+    <div class="log-form">
+      <div class="form-group">
+        <label class="form-label">세입자 선택</label>
+        <select class="form-input" id="log-tenant"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">입금일</label>
+          <input type="date" class="form-input" id="log-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">은행</label>
+          <select class="form-input" id="log-bank">
+            <option>카카오뱅크</option>
+            <option>신한은행</option>
+            <option>기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">입금액 (원)</label>
+        <input type="number" class="form-input" id="log-amount" placeholder="예: 850000" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모</label>
+        <input type="text" class="form-input" id="log-memo" placeholder="1월 월세+관리비">
+      </div>
+      <button class="btn-full" onclick="addLog()">✓ 입금 기록 저장</button>
+    </div>
+
+    <div class="section-title">입금 내역</div>
+    <div id="log-list"><div class="empty">입금 기록이 없습니다</div></div>
+  </div>
+
+  <!-- ── 세입자 ── -->
+  <div id="page-tenants" class="page">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="이름 검색..." oninput="filterTenants(this.value)">
+    </div>
+    <div class="chips">
+      <div class="chip active" onclick="filterTenantBuilding('all',this)">전체</div>
+
+    </div>
+    <div id="tenant-list"></div>
+  </div>
+
+  <!-- ── 연간현황 ── -->
+  <div id="page-yearly" class="page">
+    <div class="month-row">
+      <button class="month-nav-btn" onclick="changeYear(-1)">‹</button>
+      <span id="year-label" style="font-size:17px;font-weight:900"></span>
+      <button class="month-nav-btn" onclick="changeYear(1)">›</button>
+    </div>
+    <div id="yearly-list"></div>
+  </div>
+
+</div>
+
+<!-- Bottom Tab Bar -->
+<nav class="tabbar">
+  <button class="tab-item active" onclick="showPage('dashboard')">
+    <span class="tab-icon">📊</span>
+    <span class="tab-label">대시보드</span>
+  </button>
+  <button class="tab-item" onclick="showPage('monthly')">
+    <span class="tab-icon">💰</span>
+    <span class="tab-label">납부현황</span>
+  </button>
+  <button class="tab-item" onclick="showPage('log')">
+    <span class="tab-icon">📝</span>
+    <span class="tab-label">입금기록</span>
+  </button>
+  <button class="tab-item" onclick="showPage('tenants')">
+    <span class="tab-icon">👥</span>
+    <span class="tab-label">세입자</span>
+  </button>
+  <button class="tab-item" onclick="showPage('yearly')">
+    <span class="tab-icon">📅</span>
+    <span class="tab-label">연간</span>
+  </button>
+</nav>
+
+<!-- 납부입력 Sheet -->
+<div class="overlay" id="pay-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">💰 납부 입력</div>
+    <div class="form-group">
+      <label class="form-label">세입자</label>
+      <select class="form-input" id="modal-tenant"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">입금일</label>
+        <input type="date" class="form-input" id="modal-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">은행</label>
+        <select class="form-input" id="modal-bank">
+          <option>카카오뱅크</option>
+          <option>신한은행</option>
+          <option>기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">입금액 (원)</label>
+      <input type="number" class="form-input" id="modal-amount" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">메모</label>
+      <input type="text" class="form-input" id="modal-memo">
+    </div>
+    <button class="btn-full" onclick="confirmPay()">✓ 완납 처리</button>
+    <button class="btn-full" style="background:var(--surface2);color:var(--text2);margin-top:8px" onclick="closeSheet('pay-modal')">취소</button>
+  </div>
+</div>
+
+<!-- 세입자 추가/수정 Sheet -->
+<div class="overlay" id="tenant-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="tenant-modal-title">👤 세입자 추가</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">건물</label>
+        <select class="form-input" id="t-building" onchange="handleBuildingChange(this)">
+          <option value="연신내">연신내</option>
+          <option value="봉천동 연세">봉천동 연세</option>
+          <option value="직접입력">직접입력...</option>
+        </select>
+        <input class="form-input" id="t-building-custom" placeholder="건물명 직접입력" style="display:none;margin-top:6px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">호수</label>
+        <input class="form-input" id="t-unit" placeholder="101호">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">이름</label>
+        <input class="form-input" id="t-name" placeholder="홍길동">
+      </div>
+      <div class="form-group">
+        <label class="form-label">연락처</label>
+        <input class="form-input" id="t-phone" placeholder="010-0000-0000" inputmode="tel">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">계약시작</label>
+        <input type="date" class="form-input" id="t-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">계약종료</label>
+        <input type="date" class="form-input" id="t-end">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">월세 (원)</label>
+        <input type="number" class="form-input" id="t-rent" placeholder="800000" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">관리비 (원)</label>
+        <input type="number" class="form-input" id="t-mgmt" placeholder="50000" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">보증금 (원)</label>
+      <input type="number" class="form-input" id="t-deposit" placeholder="5000000" inputmode="numeric">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">납부방식</label>
+        <select class="form-input" id="t-pay-type">
+          <option value="후불">후불 (당월 납부)</option>
+          <option value="선불">선불 (익월 선납)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">납부 기준일 (매월)</label>
+        <input type="number" class="form-input" id="t-pay-day" placeholder="10" min="1" max="31" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">계약 렌트프리</label>
+        <select class="form-input" id="t-rf-months">
+          <option value="0">없음</option>
+          <option value="1">1개월</option>
+          <option value="2">2개월</option>
+          <option value="3">3개월</option>
+          <option value="4">4개월</option>
+          <option value="5">5개월</option>
+          <option value="6">6개월</option>
+          <option value="7">7개월</option>
+          <option value="8">8개월</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">렌트프리 시작월</label>
+        <input type="month" class="form-input" id="t-rf-start" placeholder="2024-01">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">메모</label>
+      <input class="form-input" id="t-note" placeholder="주차, 반려동물 등">
+    </div>
+    <button class="btn-full" id="tenant-confirm-btn" onclick="saveTenant()">추가</button>
+    <button class="btn-full" style="background:var(--surface2);color:var(--text2);margin-top:8px" onclick="closeSheet('tenant-modal')">취소</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Data ───
+const DEFAULT_TENANTS = [
+  {id:1, building:"연신내", unit:"1층", name:"이용진", phone:"", start:"2021-08-01", end:"2027-12-31", rent:800000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:1},
+  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", start:"2020-04-12", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
+  {id:3, building:"연신내", unit:"3층", name:"김영건", phone:"", start:"2021-08-01", end:"2027-12-31", rent:510000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:13},
+  {id:4, building:"연신내", unit:"4층", name:"김충선", phone:"", start:"2021-08-01", end:"2027-12-31", rent:400000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:16},
+  {id:5, building:"연신내", unit:"5층A", name:"허성은", phone:"", start:"2021-08-01", end:"2025-12-17", rent:310000, mgmt:0, deposit:3000000, note:"선불, 2021.6월부터 미납이력", payType:"선불", payDay:17},
+  {id:9, building:"연신내", unit:"4층B", name:"전훈철", phone:"", start:"2023-06-01", end:"2027-12-31", rent:3630000, mgmt:0, deposit:20000000, note:"2023.6월 입주", payType:"후불", payDay:31},
+  {id:10, building:"연신내", unit:"5층B", name:"김정해", phone:"", start:"2023-05-31", end:"2027-12-31", rent:3300000, mgmt:0, deposit:30000000, note:"에듀 총330만(250+50+30)", payType:"후불", payDay:1},
+  {id:6, building:"봉천동 연세", unit:"상가1", name:"미스터피자", phone:"", start:"2021-08-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:40000000, note:"봉천동 37-86", payType:"후불", payDay:1},
+  {id:7, building:"봉천동 연세", unit:"상가2", name:"김정식", phone:"", start:"2022-01-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:30000000, note:"미가면옥, 봉천동 37-86", payType:"후불", payDay:10},
+  {id:8, building:"봉천동 연세", unit:"상가3", name:"박수철", phone:"010-8599-3721", start:"2022-01-01", end:"2027-12-31", rent:3800000, mgmt:0, deposit:50000000, note:"실명 박기철, 봉천동 37-86, 계약 2022.9.15", payType:"후불", payDay:15}
+];
+
+
+
+const PRELOAD_PAYMENTS = [{"id": 1, "tenantId": 1, "year": 2023, "month": 5, "date": "2026-06-17", "amount": 800000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 2, "tenantId": 1, "year": 2023, "month": 6, "date": "2026-06-17", "amount": 800000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 3, "tenantId": 1, "year": 2023, "month": 7, "date": "2026-07-08", "amount": 800000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 4, "tenantId": 1, "year": 2023, "month": 8, "date": "2026-09-26", "amount": 800000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 5, "tenantId": 1, "year": 2023, "month": 9, "date": "2026-09-26", "amount": 800000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 6, "tenantId": 1, "year": 2023, "month": 10, "date": "2026-12-29", "amount": 800000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 7, "tenantId": 1, "year": 2023, "month": 11, "date": "2026-12-29", "amount": 800000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 8, "tenantId": 1, "year": 2023, "month": 12, "date": "2026-12-29", "amount": 800000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 9, "tenantId": 1, "year": 2024, "month": 1, "date": "2026-03-21", "amount": 800000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 10, "tenantId": 1, "year": 2024, "month": 2, "date": "2026-03-21", "amount": 800000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 11, "tenantId": 1, "year": 2024, "month": 3, "date": "2026-03-21", "amount": 800000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 12, "tenantId": 1, "year": 2024, "month": 4, "date": "2026-05-06", "amount": 800000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 13, "tenantId": 1, "year": 2024, "month": 5, "date": "2026-05-06", "amount": 800000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 14, "tenantId": 1, "year": 2024, "month": 6, "date": "2026-07-31", "amount": 800000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 15, "tenantId": 1, "year": 2024, "month": 7, "date": "2026-07-31", "amount": 800000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 16, "tenantId": 1, "year": 2024, "month": 8, "date": "2026-07-31", "amount": 800000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 17, "tenantId": 1, "year": 2024, "month": 9, "date": "2026-02-05", "amount": 800000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 18, "tenantId": 1, "year": 2024, "month": 10, "date": "2026-02-05", "amount": 800000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 19, "tenantId": 1, "year": 2024, "month": 11, "date": "2026-02-05", "amount": 800000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 20, "tenantId": 1, "year": 2024, "month": 12, "date": "2026-02-10", "amount": 800000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 21, "tenantId": 1, "year": 2025, "month": 1, "date": "2026-02-10", "amount": 800000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 22, "tenantId": 1, "year": 2025, "month": 2, "date": "2026-02-10", "amount": 800000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 23, "tenantId": 1, "year": 2025, "month": 3, "date": "2026-06-25", "amount": 800000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 24, "tenantId": 1, "year": 2025, "month": 4, "date": "2026-06-25", "amount": 800000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 25, "tenantId": 1, "year": 2025, "month": 5, "date": "2026-10-19", "amount": 800000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 26, "tenantId": 1, "year": 2025, "month": 6, "date": "2026-10-19", "amount": 800000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 27, "tenantId": 1, "year": 2025, "month": 7, "date": "2026-10-19", "amount": 800000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 28, "tenantId": 1, "year": 2025, "month": 8, "date": "2026-12-15", "amount": 800000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 29, "tenantId": 1, "year": 2025, "month": 9, "date": "2026-12-15", "amount": 800000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 30, "tenantId": 2, "year": 2023, "month": 2, "date": "2026-02-28", "amount": 510000, "bank": "기타", "memo": "2023년 2월 월세"}, {"id": 31, "tenantId": 2, "year": 2023, "month": 3, "date": "2026-03-24", "amount": 510000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 32, "tenantId": 2, "year": 2023, "month": 4, "date": "2026-04-26", "amount": 510000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 33, "tenantId": 2, "year": 2023, "month": 5, "date": "2026-05-26", "amount": 510000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 34, "tenantId": 2, "year": 2023, "month": 6, "date": "2026-06-27", "amount": 510000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 35, "tenantId": 2, "year": 2023, "month": 7, "date": "2026-07-25", "amount": 510000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 36, "tenantId": 2, "year": 2023, "month": 8, "date": "2026-08-25", "amount": 510000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 37, "tenantId": 2, "year": 2023, "month": 9, "date": "2026-09-26", "amount": 510000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 38, "tenantId": 2, "year": 2023, "month": 10, "date": "2026-10-25", "amount": 510000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 39, "tenantId": 2, "year": 2023, "month": 11, "date": "2026-11-27", "amount": 510000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 40, "tenantId": 2, "year": 2023, "month": 12, "date": "2026-12-26", "amount": 510000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 41, "tenantId": 2, "year": 2024, "month": 1, "date": "2026-01-26", "amount": 510000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 42, "tenantId": 2, "year": 2024, "month": 2, "date": "2026-02-26", "amount": 510000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 43, "tenantId": 2, "year": 2024, "month": 3, "date": "2026-03-26", "amount": 510000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 44, "tenantId": 2, "year": 2024, "month": 4, "date": "2026-04-25", "amount": 510000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 45, "tenantId": 2, "year": 2024, "month": 5, "date": "2026-05-24", "amount": 510000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 46, "tenantId": 2, "year": 2024, "month": 6, "date": "2026-06-25", "amount": 510000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 47, "tenantId": 2, "year": 2024, "month": 7, "date": "2026-07-26", "amount": 510000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 48, "tenantId": 2, "year": 2024, "month": 8, "date": "2026-08-26", "amount": 510000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 49, "tenantId": 2, "year": 2024, "month": 9, "date": "2026-09-26", "amount": 510000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 50, "tenantId": 2, "year": 2024, "month": 10, "date": "2026-10-25", "amount": 510000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 51, "tenantId": 2, "year": 2024, "month": 11, "date": "2026-11-26", "amount": 510000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 52, "tenantId": 2, "year": 2024, "month": 12, "date": "2026-12-26", "amount": 510000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 53, "tenantId": 2, "year": 2025, "month": 1, "date": "2026-01-24", "amount": 510000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 54, "tenantId": 2, "year": 2025, "month": 4, "date": "2026-04-07", "amount": 510000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 55, "tenantId": 2, "year": 2025, "month": 6, "date": "2026-06-10", "amount": 510000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 56, "tenantId": 2, "year": 2025, "month": 7, "date": "2026-07-10", "amount": 510000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 57, "tenantId": 2, "year": 2025, "month": 8, "date": "2026-08-10", "amount": 510000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 58, "tenantId": 2, "year": 2025, "month": 9, "date": "2026-09-10", "amount": 510000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 59, "tenantId": 2, "year": 2025, "month": 10, "date": "2026-10-10", "amount": 510000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 60, "tenantId": 2, "year": 2025, "month": 11, "date": "2026-11-10", "amount": 510000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 61, "tenantId": 2, "year": 2025, "month": 12, "date": "2026-12-10", "amount": 510000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 62, "tenantId": 2, "year": 2026, "month": 1, "date": "2026-01-10", "amount": 510000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 63, "tenantId": 2, "year": 2026, "month": 2, "date": "2026-02-10", "amount": 510000, "bank": "기타", "memo": "2026년 2월 월세"}, {"id": 64, "tenantId": 2, "year": 2026, "month": 3, "date": "2026-03-10", "amount": 510000, "bank": "기타", "memo": "2026년 3월 월세"}, {"id": 65, "tenantId": 3, "year": 2023, "month": 2, "date": "2026-03-14", "amount": 510000, "bank": "기타", "memo": "2023년 2월 월세"}, {"id": 66, "tenantId": 3, "year": 2023, "month": 3, "date": "2026-04-22", "amount": 510000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 67, "tenantId": 3, "year": 2023, "month": 4, "date": "2026-05-16", "amount": 510000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 68, "tenantId": 3, "year": 2023, "month": 5, "date": "2026-06-12", "amount": 510000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 69, "tenantId": 3, "year": 2023, "month": 6, "date": "2026-07-13", "amount": 510000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 70, "tenantId": 3, "year": 2023, "month": 7, "date": "2026-08-13", "amount": 510000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 71, "tenantId": 3, "year": 2023, "month": 8, "date": "2026-09-13", "amount": 510000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 72, "tenantId": 3, "year": 2023, "month": 9, "date": "2026-10-14", "amount": 510000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 73, "tenantId": 3, "year": 2023, "month": 10, "date": "2026-11-12", "amount": 510000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 74, "tenantId": 3, "year": 2023, "month": 11, "date": "2026-12-13", "amount": 510000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 75, "tenantId": 3, "year": 2023, "month": 12, "date": "2026-01-12", "amount": 510000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 76, "tenantId": 3, "year": 2024, "month": 1, "date": "2026-02-12", "amount": 510000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 77, "tenantId": 3, "year": 2024, "month": 2, "date": "2026-03-11", "amount": 510000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 78, "tenantId": 3, "year": 2024, "month": 3, "date": "2026-04-13", "amount": 510000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 79, "tenantId": 3, "year": 2024, "month": 4, "date": "2026-05-13", "amount": 510000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 80, "tenantId": 3, "year": 2024, "month": 5, "date": "2026-06-13", "amount": 510000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 81, "tenantId": 3, "year": 2024, "month": 6, "date": "2026-07-13", "amount": 510000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 82, "tenantId": 3, "year": 2024, "month": 7, "date": "2026-08-12", "amount": 510000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 83, "tenantId": 3, "year": 2024, "month": 8, "date": "2026-09-13", "amount": 510000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 84, "tenantId": 3, "year": 2024, "month": 9, "date": "2026-11-12", "amount": 510000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 85, "tenantId": 3, "year": 2024, "month": 10, "date": "2026-12-13", "amount": 510000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 86, "tenantId": 3, "year": 2024, "month": 11, "date": "2026-01-13", "amount": 510000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 87, "tenantId": 3, "year": 2024, "month": 12, "date": "2026-02-13", "amount": 510000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 88, "tenantId": 3, "year": 2025, "month": 1, "date": "2026-03-14", "amount": 510000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 89, "tenantId": 3, "year": 2025, "month": 2, "date": "2026-04-12", "amount": 510000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 90, "tenantId": 3, "year": 2025, "month": 3, "date": "2026-05-14", "amount": 510000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 91, "tenantId": 3, "year": 2025, "month": 4, "date": "2026-06-14", "amount": 510000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 92, "tenantId": 3, "year": 2025, "month": 5, "date": "2026-07-12", "amount": 510000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 93, "tenantId": 3, "year": 2025, "month": 6, "date": "2026-08-13", "amount": 510000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 94, "tenantId": 3, "year": 2025, "month": 7, "date": "2026-09-13", "amount": 510000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 95, "tenantId": 3, "year": 2025, "month": 8, "date": "2026-10-12", "amount": 510000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 96, "tenantId": 3, "year": 2025, "month": 9, "date": "2026-11-13", "amount": 510000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 97, "tenantId": 3, "year": 2025, "month": 10, "date": "2026-12-13", "amount": 510000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 98, "tenantId": 3, "year": 2025, "month": 11, "date": "2026-01-12", "amount": 510000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 99, "tenantId": 3, "year": 2025, "month": 12, "date": "2026-02-12", "amount": 510000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 100, "tenantId": 3, "year": 2026, "month": 1, "date": "2026-03-12", "amount": 510000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 101, "tenantId": 4, "year": 2023, "month": 3, "date": "2026-03-16", "amount": 400000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 102, "tenantId": 4, "year": 2023, "month": 4, "date": "2026-04-16", "amount": 400000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 103, "tenantId": 4, "year": 2023, "month": 5, "date": "2026-05-16", "amount": 400000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 104, "tenantId": 4, "year": 2023, "month": 6, "date": "2026-06-16", "amount": 400000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 105, "tenantId": 4, "year": 2023, "month": 7, "date": "2026-07-17", "amount": 400000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 106, "tenantId": 4, "year": 2023, "month": 8, "date": "2026-08-17", "amount": 400000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 107, "tenantId": 4, "year": 2023, "month": 9, "date": "2026-09-16", "amount": 400000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 108, "tenantId": 4, "year": 2023, "month": 10, "date": "2026-10-16", "amount": 400000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 109, "tenantId": 4, "year": 2023, "month": 11, "date": "2026-11-16", "amount": 400000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 110, "tenantId": 4, "year": 2023, "month": 12, "date": "2026-12-16", "amount": 400000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 111, "tenantId": 4, "year": 2024, "month": 1, "date": "2026-01-16", "amount": 400000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 112, "tenantId": 4, "year": 2024, "month": 2, "date": "2026-02-16", "amount": 400000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 113, "tenantId": 4, "year": 2024, "month": 3, "date": "2026-03-16", "amount": 400000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 114, "tenantId": 4, "year": 2024, "month": 4, "date": "2026-04-16", "amount": 400000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 115, "tenantId": 4, "year": 2024, "month": 5, "date": "2026-05-16", "amount": 400000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 116, "tenantId": 4, "year": 2024, "month": 6, "date": "2026-06-16", "amount": 400000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 117, "tenantId": 4, "year": 2024, "month": 7, "date": "2026-07-16", "amount": 400000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 118, "tenantId": 4, "year": 2024, "month": 8, "date": "2026-08-16", "amount": 400000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 119, "tenantId": 4, "year": 2024, "month": 9, "date": "2026-09-17", "amount": 400000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 120, "tenantId": 4, "year": 2024, "month": 10, "date": "2026-10-16", "amount": 400000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 121, "tenantId": 4, "year": 2024, "month": 11, "date": "2026-11-16", "amount": 400000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 122, "tenantId": 4, "year": 2024, "month": 12, "date": "2026-12-16", "amount": 400000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 123, "tenantId": 4, "year": 2025, "month": 1, "date": "2026-01-16", "amount": 400000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 124, "tenantId": 4, "year": 2025, "month": 2, "date": "2026-02-17", "amount": 400000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 125, "tenantId": 4, "year": 2025, "month": 3, "date": "2026-03-17", "amount": 400000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 126, "tenantId": 4, "year": 2025, "month": 4, "date": "2026-04-16", "amount": 400000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 127, "tenantId": 4, "year": 2025, "month": 5, "date": "2026-05-16", "amount": 400000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 128, "tenantId": 4, "year": 2025, "month": 6, "date": "2026-06-16", "amount": 400000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 129, "tenantId": 4, "year": 2025, "month": 7, "date": "2026-07-16", "amount": 400000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 130, "tenantId": 4, "year": 2025, "month": 8, "date": "2026-08-16", "amount": 400000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 131, "tenantId": 4, "year": 2025, "month": 9, "date": "2026-09-15", "amount": 400000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 132, "tenantId": 4, "year": 2025, "month": 10, "date": "2026-10-16", "amount": 400000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 133, "tenantId": 4, "year": 2025, "month": 11, "date": "2026-11-17", "amount": 400000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 134, "tenantId": 4, "year": 2025, "month": 12, "date": "2026-12-16", "amount": 400000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 135, "tenantId": 4, "year": 2026, "month": 1, "date": "2026-01-16", "amount": 400000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 136, "tenantId": 4, "year": 2026, "month": 2, "date": "2026-02-16", "amount": 400000, "bank": "기타", "memo": "2026년 2월 월세"}, {"id": 137, "tenantId": 5, "year": 2025, "month": 12, "date": "2026-12-17", "amount": 310000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 138, "tenantId": 5, "year": 2026, "month": 2, "date": "2026-02-18", "amount": 310000, "bank": "기타", "memo": "2026년 2월 월세"}, {"id": 139, "tenantId": 6, "year": 2021, "month": 8, "date": "2026-11-11", "amount": 4400000, "bank": "기타", "memo": "2021년 8월 월세"}, {"id": 140, "tenantId": 6, "year": 2021, "month": 9, "date": "2026-12-27", "amount": 4400000, "bank": "기타", "memo": "2021년 9월 월세"}, {"id": 141, "tenantId": 6, "year": 2021, "month": 10, "date": "2026-02-10", "amount": 4400000, "bank": "기타", "memo": "2021년 10월 월세"}, {"id": 142, "tenantId": 6, "year": 2021, "month": 11, "date": "2026-03-03", "amount": 4400000, "bank": "기타", "memo": "2021년 11월 월세"}, {"id": 143, "tenantId": 6, "year": 2021, "month": 12, "date": "2026-04-04", "amount": 4400000, "bank": "기타", "memo": "2021년 12월 월세"}, {"id": 144, "tenantId": 6, "year": 2022, "month": 1, "date": "2026-04-21", "amount": 4400000, "bank": "기타", "memo": "2022년 1월 월세"}, {"id": 145, "tenantId": 6, "year": 2022, "month": 2, "date": "2026-05-09", "amount": 4400000, "bank": "기타", "memo": "2022년 2월 월세"}, {"id": 146, "tenantId": 6, "year": 2022, "month": 3, "date": "2026-06-05", "amount": 4400000, "bank": "기타", "memo": "2022년 3월 월세"}, {"id": 147, "tenantId": 6, "year": 2022, "month": 4, "date": "2026-07-08", "amount": 4400000, "bank": "기타", "memo": "2022년 4월 월세"}, {"id": 148, "tenantId": 6, "year": 2022, "month": 5, "date": "2026-08-17", "amount": 4400000, "bank": "기타", "memo": "2022년 5월 월세"}, {"id": 149, "tenantId": 6, "year": 2022, "month": 6, "date": "2026-09-28", "amount": 4400000, "bank": "기타", "memo": "2022년 6월 월세"}, {"id": 150, "tenantId": 6, "year": 2022, "month": 7, "date": "2026-11-02", "amount": 4400000, "bank": "기타", "memo": "2022년 7월 월세"}, {"id": 151, "tenantId": 6, "year": 2022, "month": 8, "date": "2026-12-06", "amount": 4400000, "bank": "기타", "memo": "2022년 8월 월세"}, {"id": 152, "tenantId": 6, "year": 2022, "month": 9, "date": "2026-01-03", "amount": 4400000, "bank": "기타", "memo": "2022년 9월 월세"}, {"id": 153, "tenantId": 6, "year": 2022, "month": 10, "date": "2026-01-27", "amount": 4400000, "bank": "기타", "memo": "2022년 10월 월세"}, {"id": 154, "tenantId": 6, "year": 2022, "month": 11, "date": "2026-02-08", "amount": 4400000, "bank": "기타", "memo": "2022년 11월 월세"}, {"id": 155, "tenantId": 6, "year": 2022, "month": 12, "date": "2026-03-29", "amount": 4400000, "bank": "기타", "memo": "2022년 12월 월세"}, {"id": 156, "tenantId": 6, "year": 2023, "month": 1, "date": "2026-05-10", "amount": 4400000, "bank": "기타", "memo": "2023년 1월 월세"}, {"id": 157, "tenantId": 6, "year": 2023, "month": 2, "date": "2026-07-07", "amount": 4400000, "bank": "기타", "memo": "2023년 2월 월세"}, {"id": 158, "tenantId": 6, "year": 2023, "month": 3, "date": "2026-08-30", "amount": 4400000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 159, "tenantId": 6, "year": 2023, "month": 4, "date": "2026-09-30", "amount": 4400000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 160, "tenantId": 6, "year": 2023, "month": 5, "date": "2026-10-30", "amount": 4400000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 161, "tenantId": 6, "year": 2023, "month": 6, "date": "2026-11-22", "amount": 4400000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 162, "tenantId": 6, "year": 2023, "month": 7, "date": "2026-02-06", "amount": 4400000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 163, "tenantId": 6, "year": 2023, "month": 8, "date": "2026-03-13", "amount": 4400000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 164, "tenantId": 6, "year": 2023, "month": 9, "date": "2026-04-05", "amount": 4400000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 165, "tenantId": 6, "year": 2023, "month": 10, "date": "2026-05-09", "amount": 4400000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 166, "tenantId": 6, "year": 2023, "month": 11, "date": "2026-06-05", "amount": 4400000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 167, "tenantId": 6, "year": 2023, "month": 12, "date": "2026-06-28", "amount": 4400000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 168, "tenantId": 6, "year": 2024, "month": 1, "date": "2026-07-30", "amount": 4400000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 169, "tenantId": 6, "year": 2024, "month": 2, "date": "2026-09-05", "amount": 4400000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 170, "tenantId": 6, "year": 2024, "month": 3, "date": "2026-10-17", "amount": 4400000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 171, "tenantId": 6, "year": 2024, "month": 4, "date": "2026-11-21", "amount": 4400000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 172, "tenantId": 6, "year": 2024, "month": 5, "date": "2026-11-21", "amount": 4400000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 173, "tenantId": 6, "year": 2024, "month": 6, "date": "2026-11-21", "amount": 4400000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 174, "tenantId": 6, "year": 2024, "month": 7, "date": "2026-11-21", "amount": 4400000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 175, "tenantId": 6, "year": 2024, "month": 8, "date": "2026-11-21", "amount": 4400000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 176, "tenantId": 6, "year": 2024, "month": 9, "date": "2026-12-30", "amount": 4400000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 177, "tenantId": 6, "year": 2024, "month": 10, "date": "2026-02-21", "amount": 4400000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 178, "tenantId": 6, "year": 2024, "month": 11, "date": "2026-08-07", "amount": 4400000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 179, "tenantId": 6, "year": 2024, "month": 12, "date": "2026-09-09", "amount": 4400000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 180, "tenantId": 6, "year": 2025, "month": 1, "date": "2026-09-30", "amount": 4400000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 181, "tenantId": 6, "year": 2025, "month": 2, "date": "2026-09-30", "amount": 4400000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 182, "tenantId": 6, "year": 2025, "month": 3, "date": "2026-10-31", "amount": 4400000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 183, "tenantId": 6, "year": 2025, "month": 4, "date": "2026-01-01", "amount": 4400000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 184, "tenantId": 6, "year": 2025, "month": 5, "date": "2026-01-07", "amount": 4400000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 185, "tenantId": 6, "year": 2025, "month": 6, "date": "2026-01-07", "amount": 4400000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 186, "tenantId": 6, "year": 2025, "month": 7, "date": "2026-01-07", "amount": 4400000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 187, "tenantId": 6, "year": 2025, "month": 8, "date": "2026-01-07", "amount": 4400000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 188, "tenantId": 6, "year": 2025, "month": 9, "date": "2026-01-10", "amount": 4400000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 189, "tenantId": 6, "year": 2025, "month": 11, "date": "2026-02-06", "amount": 4400000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 190, "tenantId": 7, "year": 2022, "month": 1, "date": "2026-01-26", "amount": 4400000, "bank": "기타", "memo": "2022년 1월 월세"}, {"id": 191, "tenantId": 7, "year": 2022, "month": 2, "date": "2026-02-16", "amount": 4400000, "bank": "기타", "memo": "2022년 2월 월세"}, {"id": 192, "tenantId": 7, "year": 2022, "month": 3, "date": "2026-03-23", "amount": 4400000, "bank": "기타", "memo": "2022년 3월 월세"}, {"id": 193, "tenantId": 7, "year": 2022, "month": 4, "date": "2026-04-27", "amount": 4400000, "bank": "기타", "memo": "2022년 4월 월세"}, {"id": 194, "tenantId": 7, "year": 2022, "month": 5, "date": "2026-05-19", "amount": 4400000, "bank": "기타", "memo": "2022년 5월 월세"}, {"id": 195, "tenantId": 7, "year": 2022, "month": 6, "date": "2026-06-12", "amount": 4400000, "bank": "기타", "memo": "2022년 6월 월세"}, {"id": 196, "tenantId": 7, "year": 2022, "month": 7, "date": "2026-07-22", "amount": 4400000, "bank": "기타", "memo": "2022년 7월 월세"}, {"id": 197, "tenantId": 7, "year": 2022, "month": 8, "date": "2026-08-22", "amount": 4400000, "bank": "기타", "memo": "2022년 8월 월세"}, {"id": 198, "tenantId": 7, "year": 2022, "month": 9, "date": "2026-09-26", "amount": 4400000, "bank": "기타", "memo": "2022년 9월 월세"}, {"id": 199, "tenantId": 7, "year": 2022, "month": 10, "date": "2026-10-09", "amount": 4400000, "bank": "기타", "memo": "2022년 10월 월세"}, {"id": 200, "tenantId": 7, "year": 2022, "month": 11, "date": "2026-11-10", "amount": 4400000, "bank": "기타", "memo": "2022년 11월 월세"}, {"id": 201, "tenantId": 7, "year": 2022, "month": 12, "date": "2026-12-14", "amount": 4400000, "bank": "기타", "memo": "2022년 12월 월세"}, {"id": 202, "tenantId": 7, "year": 2023, "month": 1, "date": "2026-01-11", "amount": 4400000, "bank": "기타", "memo": "2023년 1월 월세"}, {"id": 203, "tenantId": 7, "year": 2023, "month": 2, "date": "2026-02-15", "amount": 4400000, "bank": "기타", "memo": "2023년 2월 월세"}, {"id": 204, "tenantId": 7, "year": 2023, "month": 3, "date": "2026-03-17", "amount": 4400000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 205, "tenantId": 7, "year": 2023, "month": 4, "date": "2026-04-12", "amount": 4400000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 206, "tenantId": 7, "year": 2023, "month": 5, "date": "2026-05-13", "amount": 4400000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 207, "tenantId": 7, "year": 2023, "month": 6, "date": "2026-06-13", "amount": 4400000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 208, "tenantId": 7, "year": 2023, "month": 7, "date": "2026-07-11", "amount": 4400000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 209, "tenantId": 7, "year": 2023, "month": 8, "date": "2026-08-10", "amount": 4400000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 210, "tenantId": 7, "year": 2023, "month": 9, "date": "2026-09-12", "amount": 4400000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 211, "tenantId": 7, "year": 2023, "month": 10, "date": "2026-10-17", "amount": 4400000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 212, "tenantId": 7, "year": 2023, "month": 11, "date": "2026-04-11", "amount": 4400000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 213, "tenantId": 7, "year": 2023, "month": 12, "date": "2026-07-31", "amount": 4400000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 214, "tenantId": 7, "year": 2024, "month": 1, "date": "2026-07-31", "amount": 4400000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 215, "tenantId": 7, "year": 2024, "month": 2, "date": "2026-07-31", "amount": 4400000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 216, "tenantId": 7, "year": 2024, "month": 3, "date": "2026-07-31", "amount": 4400000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 217, "tenantId": 7, "year": 2024, "month": 4, "date": "2026-08-13", "amount": 4400000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 218, "tenantId": 7, "year": 2024, "month": 5, "date": "2026-09-11", "amount": 4400000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 219, "tenantId": 7, "year": 2024, "month": 6, "date": "2026-11-08", "amount": 4400000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 220, "tenantId": 7, "year": 2024, "month": 7, "date": "2026-12-03", "amount": 4400000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 221, "tenantId": 7, "year": 2024, "month": 8, "date": "2026-01-15", "amount": 4400000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 222, "tenantId": 7, "year": 2024, "month": 9, "date": "2026-02-28", "amount": 4400000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 223, "tenantId": 7, "year": 2024, "month": 10, "date": "2026-04-04", "amount": 4400000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 224, "tenantId": 7, "year": 2024, "month": 11, "date": "2026-04-10", "amount": 4400000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 225, "tenantId": 7, "year": 2024, "month": 12, "date": "2026-04-29", "amount": 4400000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 226, "tenantId": 7, "year": 2025, "month": 1, "date": "2026-05-30", "amount": 4400000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 227, "tenantId": 7, "year": 2025, "month": 2, "date": "2026-06-10", "amount": 4400000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 228, "tenantId": 7, "year": 2025, "month": 3, "date": "2026-06-17", "amount": 4400000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 229, "tenantId": 7, "year": 2025, "month": 4, "date": "2026-07-01", "amount": 4400000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 230, "tenantId": 7, "year": 2025, "month": 5, "date": "2026-07-09", "amount": 4400000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 231, "tenantId": 7, "year": 2025, "month": 6, "date": "2026-07-16", "amount": 4400000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 232, "tenantId": 7, "year": 2025, "month": 7, "date": "2026-07-29", "amount": 4400000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 233, "tenantId": 7, "year": 2025, "month": 8, "date": "2026-08-12", "amount": 4400000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 234, "tenantId": 7, "year": 2025, "month": 9, "date": "2026-09-10", "amount": 4400000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 235, "tenantId": 7, "year": 2025, "month": 10, "date": "2026-10-29", "amount": 4400000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 236, "tenantId": 7, "year": 2025, "month": 11, "date": "2026-11-25", "amount": 4400000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 237, "tenantId": 7, "year": 2025, "month": 12, "date": "2026-01-06", "amount": 4400000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 238, "tenantId": 7, "year": 2026, "month": 1, "date": "2026-02-05", "amount": 4400000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 239, "tenantId": 7, "year": 2026, "month": 2, "date": "2026-03-04", "amount": 4400000, "bank": "기타", "memo": "2026년 2월 월세"}, {"id": 240, "tenantId": 8, "year": 2022, "month": 1, "date": "2026-02-04", "amount": 3800000, "bank": "기타", "memo": "2022년 1월 월세"}, {"id": 241, "tenantId": 8, "year": 2022, "month": 2, "date": "2026-03-03", "amount": 3800000, "bank": "기타", "memo": "2022년 2월 월세"}, {"id": 242, "tenantId": 8, "year": 2022, "month": 3, "date": "2026-04-05", "amount": 3800000, "bank": "기타", "memo": "2022년 3월 월세"}, {"id": 243, "tenantId": 8, "year": 2022, "month": 4, "date": "2026-04-30", "amount": 3800000, "bank": "기타", "memo": "2022년 4월 월세"}, {"id": 244, "tenantId": 8, "year": 2022, "month": 5, "date": "2026-05-21", "amount": 3800000, "bank": "기타", "memo": "2022년 5월 월세"}, {"id": 245, "tenantId": 8, "year": 2022, "month": 6, "date": "2026-06-22", "amount": 3800000, "bank": "기타", "memo": "2022년 6월 월세"}, {"id": 246, "tenantId": 8, "year": 2022, "month": 7, "date": "2026-08-04", "amount": 3800000, "bank": "기타", "memo": "2022년 7월 월세"}, {"id": 247, "tenantId": 8, "year": 2022, "month": 8, "date": "2026-09-06", "amount": 3800000, "bank": "기타", "memo": "2022년 8월 월세"}, {"id": 248, "tenantId": 8, "year": 2022, "month": 9, "date": "2026-11-04", "amount": 3800000, "bank": "기타", "memo": "2022년 9월 월세"}, {"id": 249, "tenantId": 8, "year": 2022, "month": 10, "date": "2026-12-13", "amount": 3800000, "bank": "기타", "memo": "2022년 10월 월세"}, {"id": 250, "tenantId": 8, "year": 2022, "month": 11, "date": "2026-01-10", "amount": 3800000, "bank": "기타", "memo": "2022년 11월 월세"}, {"id": 251, "tenantId": 8, "year": 2022, "month": 12, "date": "2026-02-14", "amount": 3800000, "bank": "기타", "memo": "2022년 12월 월세"}, {"id": 252, "tenantId": 8, "year": 2023, "month": 1, "date": "2026-03-09", "amount": 3800000, "bank": "기타", "memo": "2023년 1월 월세"}, {"id": 253, "tenantId": 8, "year": 2023, "month": 2, "date": "2026-04-12", "amount": 3800000, "bank": "기타", "memo": "2023년 2월 월세"}, {"id": 254, "tenantId": 8, "year": 2023, "month": 3, "date": "2026-05-09", "amount": 3800000, "bank": "기타", "memo": "2023년 3월 월세"}, {"id": 255, "tenantId": 8, "year": 2023, "month": 4, "date": "2026-06-14", "amount": 3800000, "bank": "기타", "memo": "2023년 4월 월세"}, {"id": 256, "tenantId": 8, "year": 2023, "month": 5, "date": "2026-07-12", "amount": 3800000, "bank": "기타", "memo": "2023년 5월 월세"}, {"id": 257, "tenantId": 8, "year": 2023, "month": 6, "date": "2026-08-09", "amount": 3800000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 258, "tenantId": 8, "year": 2023, "month": 7, "date": "2026-09-11", "amount": 3800000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 259, "tenantId": 8, "year": 2023, "month": 8, "date": "2026-10-16", "amount": 3800000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 260, "tenantId": 8, "year": 2023, "month": 9, "date": "2026-11-14", "amount": 3800000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 261, "tenantId": 8, "year": 2023, "month": 10, "date": "2026-12-20", "amount": 3800000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 262, "tenantId": 8, "year": 2023, "month": 11, "date": "2026-01-22", "amount": 3800000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 263, "tenantId": 8, "year": 2023, "month": 12, "date": "2026-02-14", "amount": 3800000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 264, "tenantId": 8, "year": 2024, "month": 1, "date": "2026-03-13", "amount": 3800000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 265, "tenantId": 8, "year": 2024, "month": 2, "date": "2026-04-17", "amount": 3800000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 266, "tenantId": 8, "year": 2024, "month": 3, "date": "2026-05-10", "amount": 3800000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 267, "tenantId": 8, "year": 2024, "month": 4, "date": "2026-06-10", "amount": 3800000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 268, "tenantId": 8, "year": 2024, "month": 5, "date": "2026-07-19", "amount": 3800000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 269, "tenantId": 8, "year": 2024, "month": 6, "date": "2026-08-12", "amount": 3800000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 270, "tenantId": 8, "year": 2024, "month": 7, "date": "2026-09-20", "amount": 3800000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 271, "tenantId": 8, "year": 2024, "month": 8, "date": "2026-10-15", "amount": 3800000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 272, "tenantId": 8, "year": 2024, "month": 9, "date": "2026-11-15", "amount": 3800000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 273, "tenantId": 8, "year": 2024, "month": 10, "date": "2026-12-19", "amount": 3800000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 274, "tenantId": 8, "year": 2024, "month": 11, "date": "2026-01-14", "amount": 3800000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 275, "tenantId": 8, "year": 2024, "month": 12, "date": "2026-02-25", "amount": 3800000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 276, "tenantId": 8, "year": 2025, "month": 1, "date": "2026-02-25", "amount": 3800000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 277, "tenantId": 8, "year": 2025, "month": 2, "date": "2026-02-25", "amount": 3800000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 278, "tenantId": 8, "year": 2025, "month": 3, "date": "2026-02-25", "amount": 3800000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 279, "tenantId": 8, "year": 2025, "month": 4, "date": "2026-03-18", "amount": 3800000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 280, "tenantId": 8, "year": 2025, "month": 5, "date": "2026-05-08", "amount": 3800000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 281, "tenantId": 8, "year": 2025, "month": 6, "date": "2026-06-16", "amount": 3800000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 282, "tenantId": 8, "year": 2025, "month": 7, "date": "2026-07-25", "amount": 3800000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 283, "tenantId": 8, "year": 2025, "month": 8, "date": "2026-08-19", "amount": 3800000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 284, "tenantId": 8, "year": 2025, "month": 9, "date": "2026-10-14", "amount": 3800000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 285, "tenantId": 8, "year": 2025, "month": 10, "date": "2026-11-14", "amount": 3800000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 286, "tenantId": 8, "year": 2025, "month": 11, "date": "2026-12-13", "amount": 3800000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 287, "tenantId": 8, "year": 2025, "month": 12, "date": "2026-01-25", "amount": 3800000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 288, "tenantId": 8, "year": 2026, "month": 1, "date": "2026-02-24", "amount": 3800000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 289, "tenantId": 9, "year": 2023, "month": 6, "date": "2026-07-01", "amount": 3630000, "bank": "기타", "memo": "2023년 6월 월세"}, {"id": 290, "tenantId": 9, "year": 2023, "month": 7, "date": "2026-07-31", "amount": 3630000, "bank": "기타", "memo": "2023년 7월 월세"}, {"id": 291, "tenantId": 9, "year": 2023, "month": 8, "date": "2026-08-31", "amount": 3630000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 292, "tenantId": 9, "year": 2023, "month": 9, "date": "2026-09-30", "amount": 3630000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 293, "tenantId": 9, "year": 2023, "month": 10, "date": "2026-10-31", "amount": 3630000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 294, "tenantId": 9, "year": 2023, "month": 11, "date": "2026-11-30", "amount": 3630000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 295, "tenantId": 9, "year": 2023, "month": 12, "date": "2026-12-31", "amount": 3630000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 296, "tenantId": 9, "year": 2024, "month": 1, "date": "2026-01-31", "amount": 3630000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 297, "tenantId": 9, "year": 2024, "month": 3, "date": "2026-03-31", "amount": 3630000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 298, "tenantId": 9, "year": 2024, "month": 4, "date": "2026-04-30", "amount": 3630000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 299, "tenantId": 9, "year": 2024, "month": 5, "date": "2026-05-31", "amount": 3630000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 300, "tenantId": 9, "year": 2024, "month": 6, "date": "2026-06-30", "amount": 3630000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 301, "tenantId": 9, "year": 2024, "month": 7, "date": "2026-07-31", "amount": 3630000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 302, "tenantId": 9, "year": 2024, "month": 8, "date": "2026-08-31", "amount": 3630000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 303, "tenantId": 9, "year": 2024, "month": 9, "date": "2026-09-30", "amount": 3630000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 304, "tenantId": 9, "year": 2024, "month": 10, "date": "2026-10-31", "amount": 3630000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 305, "tenantId": 9, "year": 2024, "month": 11, "date": "2026-11-30", "amount": 3630000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 306, "tenantId": 9, "year": 2024, "month": 12, "date": "2026-12-31", "amount": 3630000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 307, "tenantId": 9, "year": 2025, "month": 1, "date": "2026-01-31", "amount": 3630000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 308, "tenantId": 9, "year": 2025, "month": 2, "date": "2026-02-28", "amount": 3630000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 309, "tenantId": 9, "year": 2025, "month": 3, "date": "2026-03-31", "amount": 3630000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 310, "tenantId": 9, "year": 2025, "month": 4, "date": "2026-04-30", "amount": 3630000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 311, "tenantId": 9, "year": 2025, "month": 5, "date": "2026-05-31", "amount": 3630000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 312, "tenantId": 9, "year": 2025, "month": 6, "date": "2026-06-30", "amount": 3630000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 313, "tenantId": 9, "year": 2025, "month": 7, "date": "2026-07-31", "amount": 3630000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 314, "tenantId": 9, "year": 2025, "month": 8, "date": "2026-08-31", "amount": 3630000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 315, "tenantId": 9, "year": 2025, "month": 9, "date": "2026-09-30", "amount": 3630000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 316, "tenantId": 9, "year": 2025, "month": 10, "date": "2026-10-31", "amount": 3630000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 317, "tenantId": 9, "year": 2025, "month": 11, "date": "2026-11-30", "amount": 3630000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 318, "tenantId": 9, "year": 2025, "month": 12, "date": "2026-01-01", "amount": 3630000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 319, "tenantId": 9, "year": 2026, "month": 1, "date": "2026-01-31", "amount": 3630000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 320, "tenantId": 9, "year": 2026, "month": 2, "date": "2026-02-28", "amount": 3630000, "bank": "기타", "memo": "2026년 2월 월세"}, {"id": 321, "tenantId": 10, "year": 2023, "month": 8, "date": "2026-08-31", "amount": 3300000, "bank": "기타", "memo": "2023년 8월 월세"}, {"id": 322, "tenantId": 10, "year": 2023, "month": 9, "date": "2026-10-16", "amount": 3300000, "bank": "기타", "memo": "2023년 9월 월세"}, {"id": 323, "tenantId": 10, "year": 2023, "month": 10, "date": "2026-11-08", "amount": 3300000, "bank": "기타", "memo": "2023년 10월 월세"}, {"id": 324, "tenantId": 10, "year": 2023, "month": 11, "date": "2026-12-22", "amount": 3300000, "bank": "기타", "memo": "2023년 11월 월세"}, {"id": 325, "tenantId": 10, "year": 2023, "month": 12, "date": "2026-01-15", "amount": 3300000, "bank": "기타", "memo": "2023년 12월 월세"}, {"id": 326, "tenantId": 10, "year": 2024, "month": 1, "date": "2026-02-01", "amount": 3300000, "bank": "기타", "memo": "2024년 1월 월세"}, {"id": 327, "tenantId": 10, "year": 2024, "month": 2, "date": "2026-04-03", "amount": 3300000, "bank": "기타", "memo": "2024년 2월 월세"}, {"id": 328, "tenantId": 10, "year": 2024, "month": 3, "date": "2026-06-03", "amount": 3300000, "bank": "기타", "memo": "2024년 3월 월세"}, {"id": 329, "tenantId": 10, "year": 2024, "month": 4, "date": "2026-06-03", "amount": 3300000, "bank": "기타", "memo": "2024년 4월 월세"}, {"id": 330, "tenantId": 10, "year": 2024, "month": 5, "date": "2026-06-03", "amount": 3300000, "bank": "기타", "memo": "2024년 5월 월세"}, {"id": 331, "tenantId": 10, "year": 2024, "month": 6, "date": "2026-07-30", "amount": 3300000, "bank": "기타", "memo": "2024년 6월 월세"}, {"id": 332, "tenantId": 10, "year": 2024, "month": 7, "date": "2026-08-09", "amount": 3300000, "bank": "기타", "memo": "2024년 7월 월세"}, {"id": 333, "tenantId": 10, "year": 2024, "month": 8, "date": "2026-09-12", "amount": 3300000, "bank": "기타", "memo": "2024년 8월 월세"}, {"id": 334, "tenantId": 10, "year": 2024, "month": 9, "date": "2026-09-30", "amount": 3300000, "bank": "기타", "memo": "2024년 9월 월세"}, {"id": 335, "tenantId": 10, "year": 2024, "month": 10, "date": "2026-11-21", "amount": 3300000, "bank": "기타", "memo": "2024년 10월 월세"}, {"id": 336, "tenantId": 10, "year": 2024, "month": 11, "date": "2026-01-06", "amount": 3300000, "bank": "기타", "memo": "2024년 11월 월세"}, {"id": 337, "tenantId": 10, "year": 2024, "month": 12, "date": "2026-02-13", "amount": 3300000, "bank": "기타", "memo": "2024년 12월 월세"}, {"id": 338, "tenantId": 10, "year": 2025, "month": 1, "date": "2026-02-28", "amount": 3300000, "bank": "기타", "memo": "2025년 1월 월세"}, {"id": 339, "tenantId": 10, "year": 2025, "month": 2, "date": "2026-02-28", "amount": 3300000, "bank": "기타", "memo": "2025년 2월 월세"}, {"id": 340, "tenantId": 10, "year": 2025, "month": 3, "date": "2026-03-31", "amount": 3300000, "bank": "기타", "memo": "2025년 3월 월세"}, {"id": 341, "tenantId": 10, "year": 2025, "month": 4, "date": "2026-04-30", "amount": 3300000, "bank": "기타", "memo": "2025년 4월 월세"}, {"id": 342, "tenantId": 10, "year": 2025, "month": 5, "date": "2026-05-31", "amount": 3300000, "bank": "기타", "memo": "2025년 5월 월세"}, {"id": 343, "tenantId": 10, "year": 2025, "month": 6, "date": "2026-07-24", "amount": 3300000, "bank": "기타", "memo": "2025년 6월 월세"}, {"id": 344, "tenantId": 10, "year": 2025, "month": 7, "date": "2026-08-14", "amount": 3300000, "bank": "기타", "memo": "2025년 7월 월세"}, {"id": 345, "tenantId": 10, "year": 2025, "month": 8, "date": "2026-09-05", "amount": 3300000, "bank": "기타", "memo": "2025년 8월 월세"}, {"id": 346, "tenantId": 10, "year": 2025, "month": 9, "date": "2026-10-02", "amount": 3300000, "bank": "기타", "memo": "2025년 9월 월세"}, {"id": 347, "tenantId": 10, "year": 2025, "month": 10, "date": "2026-11-05", "amount": 3300000, "bank": "기타", "memo": "2025년 10월 월세"}, {"id": 348, "tenantId": 10, "year": 2025, "month": 11, "date": "2026-12-07", "amount": 3300000, "bank": "기타", "memo": "2025년 11월 월세"}, {"id": 349, "tenantId": 10, "year": 2025, "month": 12, "date": "2026-01-11", "amount": 3300000, "bank": "기타", "memo": "2025년 12월 월세"}, {"id": 350, "tenantId": 10, "year": 2026, "month": 1, "date": "2026-02-01", "amount": 3300000, "bank": "기타", "memo": "2026년 1월 월세"}, {"id": 351, "tenantId": 10, "year": 2026, "month": 2, "date": "2026-03-11", "amount": 3300000, "bank": "기타", "memo": "2026년 2월 월세"}];
+let tenants  = JSON.parse(localStorage.getItem('rm_tenants')  || 'null') || DEFAULT_TENANTS;
+let payments = JSON.parse(localStorage.getItem('rm_payments') || 'null') || PRELOAD_PAYMENTS;
+let logs     = JSON.parse(localStorage.getItem('rm_logs')     || '[]');
+
+let curMonth = new Date().getMonth() + 1;
+let curYear  = new Date().getFullYear();
+let viewYear = curYear;
+let mFilter  = 'all';
+let tBFilter = 'all';
+let tSearch  = '';
+let nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+let editingId = null;
+
+// ── Firebase 초기화 ──
+const firebaseConfig = {
+  databaseURL: "https://mymonth-6cd61-default-rtdb.firebaseio.com"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Firebase에서 데이터 불러오기 (앱 시작 시)
+function loadFromFirebase() {
+  showToast('🔄 데이터 동기화 중...');
+  db.ref('mymonth').once('value').then(snapshot => {
+    const data = snapshot.val();
+    if (data) {
+      tenants  = data.tenants  || tenants;
+      payments = data.payments || payments;
+      logs     = data.logs     || logs;
+      nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+    }
+    // localStorage에도 백업
+    localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
+    localStorage.setItem('rm_payments', JSON.stringify(payments));
+    localStorage.setItem('rm_logs',     JSON.stringify(logs));
+    renderDashboard();
+    renderMonthly();
+    renderTenants();
+    renderYearly();
+    showToast('✅ 동기화 완료');
+  }).catch(() => {
+    showToast('⚠️ 오프라인 - 로컬 데이터 사용 중');
+  });
+}
+
+// Firebase + localStorage 동시 저장
+function save() {
+  localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
+  localStorage.setItem('rm_payments', JSON.stringify(payments));
+  localStorage.setItem('rm_logs',     JSON.stringify(logs));
+  // Firebase에도 저장
+  db.ref('mymonth').set({
+    tenants:  tenants,
+    payments: payments,
+    logs:     logs
+  }).catch(() => {
+    // 오프라인이면 무시 (localStorage에는 저장됨)
+  });
+}
+function W(n) { return '₩' + n.toLocaleString('ko-KR'); }
+function getPayment(tid, y, m) {
+  return payments.find(p => p.tenantId===tid && p.year===y && p.month===m);
+}
+// 렌트프리 여부 판별: 계약 렌트프리(rfMonths) + 특별 렌트프리(rentfree 타입 payment)
+function isRentFree(t, year, month) {
+  // 계약 렌트프리: rfStart부터 rfMonths개월
+  if (t.rfMonths > 0 && t.rfStart) {
+    const [ry, rm] = t.rfStart.split('-').map(Number);
+    for (let i = 0; i < t.rfMonths; i++) {
+      let mm = rm + i, yy = ry;
+      if (mm > 12) { mm -= 12; yy++; }
+      if (yy === year && mm === month) return true;
+    }
+  }
+  // 특별 렌트프리: payment에 type:'rentfree' 플래그
+  const pay = getPayment(t.id, year, month);
+  if (pay && pay.type === 'rentfree') return true;
+  return false;
+}
+// 렌트프리이거나 실제 납부된 경우 → "완납처리"
+function isPaidOrFree(t, year, month) {
+  if (isRentFree(t, year, month)) return true;
+  return !!getPayment(t.id, year, month);
+}
+function getTenant(id) { return tenants.find(t => t.id===id); }
+
+// ─── Navigation ───
+const topbarActions = {
+  dashboard: { title:'🏠 월세관리', sub:'', btn:null },
+  monthly:   { title:'💰 납부현황', sub:'', btn:{label:'+ 납부입력', fn:'openPayModal()'} },
+  log:       { title:'📝 입금기록', sub:'카카오뱅크·신한은행', btn:null },
+  tenants:   { title:'👥 세입자 정보', sub:'', btn:{label:'+ 추가', fn:'openTenantModal()'} },
+  yearly:    { title:'📅 연간 수입', sub:'', btn:null },
+};
+
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(el => {
+    if (el.getAttribute('onclick')?.includes(p)) el.classList.add('active');
+  });
+  document.getElementById('scroll-area').scrollTop = 0;
+
+  const cfg = topbarActions[p];
+  document.getElementById('topbar-title').textContent = cfg.title;
+  document.getElementById('topbar-sub').textContent   = cfg.sub;
+  const btn = document.getElementById('topbar-action');
+  if (cfg.btn) { btn.style.display=''; btn.textContent=cfg.btn.label; btn.setAttribute('onclick', cfg.btn.fn); }
+  else { btn.style.display='none'; }
+
+  if (p==='dashboard') renderDashboard();
+  if (p==='monthly')   renderMonthly();
+  if (p==='log')       renderLog();
+  if (p==='tenants')   renderTenants();
+  if (p==='yearly')    renderYearly();
+}
+
+// ─── Dashboard ───
+
+// ─── 데이터 내보내기 / 불러오기 ───
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tenants: tenants,
+    payments: payments,
+    logs: logs
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `월세관리_${dateStr}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ 데이터를 내보냈습니다');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.tenants || !data.payments) {
+        showToast('올바른 백업 파일이 아닙니다', true); return;
+      }
+      if (!confirm('현재 데이터를 파일의 데이터로 덮어씁니다.\n계속하시겠습니까?')) return;
+      tenants  = data.tenants;
+      payments = data.payments;
+      logs     = data.logs || [];
+      save();
+      renderDashboard();
+      renderMonthly();
+      renderTenants();
+      showToast('✓ 데이터를 불러왔습니다');
+    } catch(err) {
+      showToast('파일을 읽는 중 오류가 발생했습니다', true);
+    }
+  };
+  reader.readAsText(file);
+  // 같은 파일 다시 선택 가능하도록 초기화
+  event.target.value = '';
+}
+
+function renderDashboard() {
+  const paidList = payments.filter(p => p.year===curYear && p.month===curMonth && p.type!=='rentfree');
+  const paidOrFreeIds = tenants.filter(t => isPaidOrFree(t, curYear, curMonth)).map(t=>t.id);
+  const unpaid   = tenants.filter(t => !paidOrFreeIds.includes(t.id));
+  const paidAmt  = paidList.reduce((a,p) => a+p.amount, 0);
+  const target   = tenants.reduce((a,t) => a+t.rent+t.mgmt, 0);
+
+  document.getElementById('d-target').textContent   = W(target);
+  document.getElementById('d-paid').textContent     = paidList.length+'명';
+  document.getElementById('d-paid-amt').textContent = W(paidAmt)+' 수령';
+  document.getElementById('d-unpaid').textContent   = unpaid.length+'명';
+  document.getElementById('d-unpaid-sub').textContent =
+    unpaid.length ? unpaid.slice(0,3).map(t=>t.name).join('·')+(unpaid.length>3?'..':'') : '전원완납 🎉';
+  
+  // Building counts
+  const buildings = [...new Set(tenants.map(t=>t.building))];
+  const bSub = buildings.map(b=>`${b} ${tenants.filter(t=>t.building===b).length}명`).join(' · ');
+  const bSubEl = document.getElementById('d-building-sub');
+  if (bSubEl) bSubEl.textContent = bSub;
+
+  // 최근 입금 3건: year/month 기준 정렬 (date값 신뢰 안 함)
+  // 새로 입력한 항목(id가 클수록 최신)을 우선시
+  const recentPays = payments
+    .filter(p => p.type !== 'rentfree')
+    .sort((a, b) => {
+      // 연/월 내림차순, 같으면 id 내림차순(나중에 입력한 것 우선)
+      if (b.year !== a.year) return b.year - a.year;
+      if (b.month !== a.month) return b.month - a.month;
+      return (b.id||0) - (a.id||0);
+    })
+    .slice(0, 3);
+  const el = document.getElementById('d-log-list');
+  if (!recentPays.length) { el.innerHTML='<div class="empty">입금 기록이 없습니다</div>'; return; }
+  el.innerHTML = recentPays.map(p => {
+    const t = getTenant(p.tenantId);
+    return `<div class="log-item">
+      <div style="font-size:22px">🏦</div>
+      <div class="log-item-main">
+        <div class="log-item-name">${t?.name||'?'} <span style="font-size:11px;color:var(--text2)">${t?.building||''} ${t?.unit||''}</span></div>
+        <div class="log-item-sub">${p.year}년 ${p.month}월${p.date?' · '+p.date:''}${p.bank&&p.bank!=='기타'?' · '+p.bank:''}</div>
+      </div>
+      <div class="log-amount">${W(p.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Monthly ───
+function changeMonth(d) {
+  curMonth += d;
+  if (curMonth>12){curMonth=1;curYear++;}
+  if (curMonth<1) {curMonth=12;curYear--;}
+  renderMonthly();
+}
+function filterMonthly(f, el) {
+  mFilter = f;
+  document.querySelectorAll('#page-monthly .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderMonthly();
+}
+function renderMonthly() {
+  document.getElementById('month-label').textContent = `${curYear}년 ${curMonth}월`;
+  let list = tenants;
+  if (mFilter==='미납')  list=list.filter(t=>!isPaidOrFree(t,curYear,curMonth));
+
+  const el = document.getElementById('monthly-list');
+  // 색상 범례 추가
+  const legend = `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:900;color:#fff;-webkit-text-fill-color:#fff;background:#1d4ed8;border-radius:6px;padding:4px 11px;border:2px solid #1e40af">🔵 완납</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:900;color:#1a0f00;-webkit-text-fill-color:#1a0f00;background:#f59e0b;border-radius:6px;padding:4px 11px;border:2px solid #d97706">🟡 렌트프리</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:900;color:#fff;-webkit-text-fill-color:#fff;background:#b91c1c;border-radius:6px;padding:4px 11px;border:2px solid #991b1b">🔴 미납</span>
+  </div>`;
+
+  el.innerHTML = legend + list.map(t => {
+    const pay = getPayment(t.id, curYear, curMonth);
+    const rf  = isRentFree(t, curYear, curMonth);
+    const paidSpecial = pay && pay.type==='rentfree';
+    return `<div class="list-item" onclick="openTenantHistory(${t.id})" style="cursor:pointer">
+      <div class="list-item-left">
+        <div class="list-item-name">${t.name}</div>
+        <div class="list-item-sub">${t.building} ${t.unit}${pay&&!paidSpecial?' · '+pay.date:rf?' · 렌트프리':''}</div>
+      </div>
+      <div class="list-item-right">
+        <div class="list-item-amount">${rf?'🆓':W(t.rent+t.mgmt)}</div>
+        ${rf
+          ? `<span class="badge" style="background:#f59e0b;color:#1a0f00;-webkit-text-fill-color:#1a0f00;border:2px solid #d97706;border-radius:6px;padding:3px 9px;font-weight:900;font-size:12px">🟡 렌트프리</span>`
+          : pay
+            ? `<span class="badge" style="background:#1d4ed8;color:#fff;-webkit-text-fill-color:#fff;border:2px solid #1e40af;border-radius:6px;padding:3px 9px;font-weight:900;font-size:12px">🔵 완납</span>`
+            : `<button class="pay-action" style="background:#b91c1c!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:2px solid #991b1b!important;font-weight:900!important" onclick="event.stopPropagation();quickPay(${t.id})">입금확인</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function quickPay(tenantId) {
+  const t = getTenant(tenantId);
+  populatePaySelect();
+  document.getElementById('modal-tenant').value = tenantId;
+  document.getElementById('modal-amount').value = t.rent + t.mgmt;
+  document.getElementById('modal-date').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-memo').value   = `${curYear}년 ${curMonth}월 월세+관리비`;
+  document.getElementById('pay-modal').classList.add('show');
+}
+function openPayModal() {
+  populatePaySelect();
+  document.getElementById('modal-amount').value = '';
+  document.getElementById('modal-memo').value   = '';
+  document.getElementById('modal-date').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('pay-modal').classList.add('show');
+}
+function confirmPay() {
+  const tenantId = parseInt(document.getElementById('modal-tenant').value);
+  const date     = document.getElementById('modal-date').value;
+  const amount   = parseInt(document.getElementById('modal-amount').value);
+  const bank     = document.getElementById('modal-bank').value;
+  const memo     = document.getElementById('modal-memo').value;
+  if (!tenantId||!date||!amount) { showToast('날짜와 금액을 입력해주세요', true); return; }
+
+  payments = payments.filter(p=>!(p.tenantId===tenantId&&p.year===curYear&&p.month===curMonth));
+  payments.push({id:Date.now(), tenantId, year:curYear, month:curMonth, date, amount, bank, memo});
+  logs.push({id:Date.now()+1, date, tenantId, amount, bank, memo});
+  save();
+  closeSheet('pay-modal');
+  renderMonthly();
+  renderDashboard();
+  showToast('✓ 납부 완료 처리됐습니다');
+}
+function populatePaySelect() {
+  document.getElementById('modal-tenant').innerHTML = tenants.map(t=>
+    `<option value="${t.id}">${t.name} (${t.building} ${t.unit})</option>`).join('');
+}
+
+// ─── Log ───
+function populateLogSelect() {
+  document.getElementById('log-tenant').innerHTML = tenants.map(t=>
+    `<option value="${t.id}">${t.name} (${t.building} ${t.unit})</option>`).join('');
+}
+function addLog() {
+  const date     = document.getElementById('log-date').value;
+  const tenantId = parseInt(document.getElementById('log-tenant').value);
+  const amount   = parseInt(document.getElementById('log-amount').value);
+  const bank     = document.getElementById('log-bank').value;
+  const memo     = document.getElementById('log-memo').value;
+  if (!date||!amount) { showToast('날짜와 금액을 입력해주세요', true); return; }
+
+  const lid = Date.now();
+  logs.push({id:lid, date, tenantId, amount, bank, memo});
+  const d=new Date(date), y=d.getFullYear(), m=d.getMonth()+1;
+  if (!getPayment(tenantId,y,m)) payments.push({id:lid+1,tenantId,year:y,month:m,date,amount,bank,memo});
+  save();
+  document.getElementById('log-amount').value='';
+  document.getElementById('log-memo').value='';
+  renderLog();
+  renderDashboard();
+  showToast('✓ 입금 기록이 저장됐습니다');
+}
+function deleteLog(id) {
+  if (!confirm('이 입금 기록을 삭제할까요?')) return;
+  logs = logs.filter(l=>l.id!==id);
+  save(); renderLog();
+}
+function renderLog() {
+  populateLogSelect();
+  const sorted = [...logs].sort((a,b)=>b.date.localeCompare(a.date));
+  const el = document.getElementById('log-list');
+  if (!sorted.length) { el.innerHTML='<div class="empty">입금 기록이 없습니다<br>위 폼에서 입력하세요</div>'; return; }
+  el.innerHTML = sorted.map(l => {
+    const t = getTenant(l.tenantId);
+    return `<div class="log-item">
+      <div style="font-size:20px">🏦</div>
+      <div class="log-item-main">
+        <div class="log-item-name">${t?.name||'?'} <span style="font-size:11px;color:var(--text2)">${t?.building||''} ${t?.unit||''}</span></div>
+        <div class="log-item-sub">${l.date} · ${l.bank}${l.memo?' · '+l.memo:''}</div>
+      </div>
+      <div class="log-item-right">
+        <div class="log-amount">${W(l.amount)}</div>
+        <button class="log-del" onclick="deleteLog(${l.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Tenants ───
+function filterTenantBuilding(f, el) {
+  tBFilter = f;
+  document.querySelectorAll('#page-tenants .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderTenants();
+}
+function filterTenants(q) { tSearch=q.toLowerCase(); renderTenants(); }
+function renderTenants() {
+  let list = tenants;
+  if (tSearch) list=list.filter(t=>t.name.toLowerCase().includes(tSearch));
+  const el = document.getElementById('tenant-list');
+  if (!list.length) { el.innerHTML='<div class="empty">세입자가 없습니다</div>'; return; }
+  el.innerHTML = list.map((t,idx) => {
+    const daysLeft = Math.ceil((new Date(t.end)-new Date())/86400000);
+    const exp = daysLeft<90?`<span style="color:var(--yellow);font-size:11px">⚠ ${daysLeft}일 후 만료</span>`:'';
+    return `<div class="tenant-card" draggable="true" data-id="${t.id}" data-idx="${idx}"
+      ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropTenant(event)" ondragend="dragEnd(event)">
+      <div class="tc-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px;color:var(--text3);cursor:grab;touch-action:none" class="drag-handle">☰</span>
+          <div class="tc-name">${t.name}</div>
+        </div>
+        <span class="tc-building">${t.building} ${t.unit}</span>
+      </div>
+      <div class="tc-row"><span class="tc-key">연락처</span><span class="tc-val">${t.phone}</span></div>
+      <div class="tc-row"><span class="tc-key">월세</span><span class="tc-val">${W(t.rent)}</span></div>
+      <div class="tc-row"><span class="tc-key">관리비</span><span class="tc-val">${W(t.mgmt)}</span></div>
+      <div class="tc-row"><span class="tc-key">보증금</span><span class="tc-val">${W(t.deposit)}</span></div>
+      <div class="tc-row"><span class="tc-key">계약기간</span><span class="tc-val" style="font-size:11px">${t.start}~${t.end} ${exp}</span></div>
+      <div class="tc-row"><span class="tc-key">납부방식</span><span class="tc-val">${t.payType||'후불'} · 매월 ${t.payDay||1}일${t.rfMonths>0?` · 계약RF ${t.rfMonths}개월`:''}</span></div>
+      ${t.note?`<div class="tc-row"><span class="tc-key">메모</span><span class="tc-val" style="color:var(--text2)">${t.note}</span></div>`:''}
+      <div class="tc-actions">
+        <button class="tc-btn edit" onclick="openEditTenant(${t.id})">✏️ 수정</button>
+        <button class="tc-btn del"  onclick="deleteTenant(${t.id})">🗑 삭제</button>
+        <button class="tc-btn" style="background:rgba(79,142,247,.1);color:var(--accent);border:1px solid rgba(79,142,247,.2)" onclick="openTenantHistory(${t.id})">📋 납부이력</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openTenantModal() {
+  editingId=null;
+  document.getElementById('tenant-modal-title').textContent='👤 세입자 추가';
+  document.getElementById('tenant-confirm-btn').textContent='추가';
+  ['t-building','t-unit','t-name','t-phone','t-start','t-end','t-rent','t-mgmt','t-deposit','t-note','t-pay-day','t-rf-start']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('t-pay-type').value='후불';
+  document.getElementById('t-rf-months').value='0';
+  document.getElementById('tenant-modal').classList.add('show');
+}
+function openEditTenant(id) {
+  const t=getTenant(id); if(!t) return;
+  editingId=id;
+  document.getElementById('tenant-modal-title').textContent='✏️ 세입자 수정';
+  document.getElementById('tenant-confirm-btn').textContent='저장';
+  const bSel = document.getElementById('t-building');
+  const knownBuildings = ['연신내', '봉천동 연세'];
+  if (knownBuildings.includes(t.building)) {
+    bSel.value = t.building;
+    document.getElementById('t-building-custom').style.display = 'none';
+  } else {
+    bSel.value = '직접입력';
+    document.getElementById('t-building-custom').style.display = 'block';
+    document.getElementById('t-building-custom').value = t.building;
+  }
+  document.getElementById('t-unit').value=t.unit;
+  document.getElementById('t-name').value=t.name;
+  document.getElementById('t-phone').value=t.phone;
+  document.getElementById('t-start').value=t.start;
+  document.getElementById('t-end').value=t.end;
+  document.getElementById('t-rent').value=t.rent;
+  document.getElementById('t-mgmt').value=t.mgmt;
+  document.getElementById('t-deposit').value=t.deposit;
+  document.getElementById('t-pay-type').value=t.payType||'후불';
+  document.getElementById('t-pay-day').value=t.payDay||'';
+  document.getElementById('t-rf-months').value=t.rfMonths||0;
+  document.getElementById('t-rf-start').value=t.rfStart||'';
+  document.getElementById('t-note').value=t.note;
+  document.getElementById('tenant-modal').classList.add('show');
+}
+function deleteTenant(id) {
+  const t=getTenant(id);
+  if (!confirm(`"${t.name}" 세입자를 삭제할까요?`)) return;
+  tenants  = tenants.filter(x=>x.id!==id);
+  payments = payments.filter(p=>p.tenantId!==id);
+  logs     = logs.filter(l=>l.tenantId!==id);
+  save(); renderTenants(); renderDashboard();
+  showToast('삭제됐습니다');
+}
+function saveTenant() {
+  const name=document.getElementById('t-name').value.trim();
+  const unit=document.getElementById('t-unit').value.trim();
+  if (!name||!unit) { showToast('이름과 호수를 입력해주세요', true); return; }
+  const data = {
+    building: getBuildingValue(),
+    unit, name,
+    phone:   document.getElementById('t-phone').value,
+    start:   document.getElementById('t-start').value,
+    end:     document.getElementById('t-end').value,
+    rent:    parseInt(document.getElementById('t-rent').value)||0,
+    mgmt:    parseInt(document.getElementById('t-mgmt').value)||0,
+    deposit: parseInt(document.getElementById('t-deposit').value)||0,
+    payType: document.getElementById('t-pay-type').value||'후불',
+    payDay:  parseInt(document.getElementById('t-pay-day').value)||1,
+    rfMonths: parseInt(document.getElementById('t-rf-months').value)||0,
+    rfStart:  document.getElementById('t-rf-start').value||'',
+    note:    document.getElementById('t-note').value,
+  };
+  if (editingId) {
+    const idx=tenants.findIndex(t=>t.id===editingId);
+    if(idx!==-1) tenants[idx]={...tenants[idx],...data};
+    showToast('✓ 수정됐습니다');
+  } else {
+    tenants.push({id:nextId++,...data});
+    showToast('✓ 세입자가 추가됐습니다');
+  }
+  save(); closeSheet('tenant-modal'); renderTenants(); renderDashboard();
+  populatePaySelect(); populateLogSelect();
+}
+
+// ─── Yearly ───
+function changeYear(d) { viewYear+=d; renderYearly(); }
+function renderYearly() {
+  document.getElementById('year-label').textContent = viewYear+'년';
+  const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const el=document.getElementById('yearly-list');
+  let grand=0;
+  el.innerHTML = tenants.map(t => {
+    let total=0;
+    const cells=months.map((_,mi)=>{
+      const pay=getPayment(t.id,viewYear,mi+1);
+      const rf=isRentFree(t,viewYear,mi+1);
+      const v=pay&&!rf?pay.amount:0; total+=v;
+      return `<div class="yr-month">
+        <div class="yr-month-label">${mi+1}월</div>
+        <div class="yr-month-val ${rf?'rf':v?'has':'no'}">${rf?'🆓':v?'✓':'—'}</div>
+      </div>`;
+    }).join('');
+    grand+=total;
+    return `<div class="yearly-row">
+      <div class="yr-header">
+        <span class="yr-name">${t.name} <span style="font-size:11px;color:var(--text2)">${t.building} ${t.unit}</span></span>
+        <span class="yr-total">${total?W(total):'—'}</span>
+      </div>
+      <div class="yr-months">${cells}</div>
+    </div>`;
+  }).join('') +
+  `<div class="yearly-row" style="border-color:var(--accent)">
+    <div class="yr-header">
+      <span class="yr-name" style="color:var(--accent)">연간 합계</span>
+      <span class="yr-total" style="font-size:18px">${W(grand)}</span>
+    </div>
+  </div>`;
+}
+
+// ─── Sheet ───
+function closeSheet(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('show'); }));
+
+// ─── Toast ───
+function showToast(msg, err) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=err?'var(--red)':'var(--green)';
+  t.style.color='white';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ─── Building select direct input ───
+function handleBuildingChange(sel) {
+  const custom = document.getElementById('t-building-custom');
+  if (sel.value === '직접입력') {
+    custom.style.display = 'block';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+  }
+}
+function getBuildingValue() {
+  const sel = document.getElementById('t-building');
+  if (sel.value === '직접입력') {
+    return document.getElementById('t-building-custom').value.trim() || '기타';
+  }
+  return sel.value;
+}
+
+// ─── Drag & Drop reorder ───
+let dragSrcId = null;
+function dragStart(e) {
+  dragSrcId = parseInt(e.currentTarget.dataset.id);
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+function dropTenant(e) {
+  e.stopPropagation();
+  const targetId = parseInt(e.currentTarget.dataset.id);
+  if (dragSrcId === targetId) return;
+  const srcIdx = tenants.findIndex(t=>t.id===dragSrcId);
+  const tgtIdx = tenants.findIndex(t=>t.id===targetId);
+  const [removed] = tenants.splice(srcIdx, 1);
+  tenants.splice(tgtIdx, 0, removed);
+  save();
+  renderTenants();
+  return false;
+}
+function dragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+}
+
+// ─── Tenant History Modal ───
+// 선불: N월 월세를 N-1월 payDay에 납부  /  후불: N월 월세를 N월 payDay에 납부
+function getExpectedPayDate(t, year, month) {
+  const day = t.payDay || 1;
+  if ((t.payType||'후불') === '선불') {
+    // 선불: 전달 payDay에 납부
+    let y = year, m = month - 1;
+    if (m < 1) { m = 12; y--; }
+    const maxDay = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2,'0')}-${String(Math.min(day,maxDay)).padStart(2,'0')}`;
+  } else {
+    // 후불: 당월 payDay에 납부
+    const maxDay = new Date(year, month, 0).getDate();
+    return `${year}-${String(month).padStart(2,'0')}-${String(Math.min(day,maxDay)).padStart(2,'0')}`;
+  }
+}
+
+function openTenantHistory(tenantId) {
+  const t = getTenant(tenantId);
+  if (!t) return;
+  const startDate = new Date(t.start);
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth() + 1;
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
+
+  let months = [];
+  let y = startYear, m = startMonth;
+  while (y < todayYear || (y === todayYear && m <= todayMonth)) {
+    months.push({year: y, month: m});
+    m++; if (m > 12) { m = 1; y++; }
+  }
+
+  const unpaidMonths = months.filter(({year, month}) => !isPaidOrFree(t, year, month));
+
+  let streak = 0, unpaidStart = null;
+  for (let i = months.length - 1; i >= 0; i--) {
+    const {year, month} = months[i];
+    if (!isPaidOrFree(t, year, month)) {
+      streak++; unpaidStart = `${year}년 ${month}월`;
+    } else break;
+  }
+
+  const totalUnpaid = unpaidMonths.length;
+  const totalUnpaidAmt = totalUnpaid * (t.rent + t.mgmt);
+
+  const byYear = {};
+  months.forEach(({year, month}) => {
+    if (!byYear[year]) byYear[year] = [];
+    byYear[year].push(month);
+  });
+
+  const payTypeLabel = (t.payType||'후불') === '선불'
+    ? `선불 · 매월 ${t.payDay||1}일 (전달 납부)`
+    : `후불 · 매월 ${t.payDay||1}일`;
+  const rfLabel = t.rfMonths > 0 && t.rfStart
+    ? ` · 계약RF ${t.rfStart}~${t.rfMonths}개월` : '';
+
+  const yearKeys = Object.keys(byYear).map(Number).sort((a,b) => b - a);
+  const allCells = yearKeys.map(year => {
+    const yearMonths = byYear[year];
+    const paidCount = yearMonths.filter(mo => isPaidOrFree(t, year, mo)).length;
+    const cells = yearMonths.map(month => {
+      const pay = getPayment(tenantId, year, month);
+      const rf  = isRentFree(t, year, month);
+      const expDate = getExpectedPayDate(t, year, month);
+      const isLate = pay && !rf && pay.date > expDate;
+      let bg, txtColor, icon, iconSize;
+      if (rf) {
+        // 렌트프리 = 진한 노랑
+        bg='#f59e0b'; txtColor='#1a0f00'; icon='O'; iconSize='16px';
+      } else if (pay) {
+        // 완납 = 진한 파랑
+        bg='#1d4ed8'; txtColor='#ffffff'; icon='O'; iconSize='16px';
+      } else {
+        // 미납 = 진한 빨강
+        bg='#b91c1c'; txtColor='#ffffff'; icon='X'; iconSize='16px';
+      }
+      const tooltip = rf ? '렌트프리' : pay ? `입금: ${pay.date}${isLate?' (지연)':''}` : `예정: ${expDate}`;
+      return `<div
+        title="${tooltip}"
+        onclick="openHistCellEdit(${tenantId},${year},${month})"
+        style="cursor:pointer;display:block;border-radius:8px;padding:6px 2px 5px;text-align:center;background-color:${bg};background:${bg};border:2px solid ${bg};outline:none;-webkit-appearance:none;">
+        <div style="display:block;font-size:11px;font-weight:800;line-height:1.2;color:${txtColor};-webkit-text-fill-color:${txtColor};opacity:1;">${month}월</div>
+        <div style="display:block;font-size:${iconSize};font-weight:900;line-height:1.3;color:${txtColor};-webkit-text-fill-color:${txtColor};opacity:1;">${icon}</div>
+      </div>`;
+    }).join('');
+    return `<div class="hist-year-section">
+      <div class="hist-year-header">
+        <span class="hist-year-label">${year}년</span>
+        <span class="hist-year-stat ${paidCount===yearMonths.length?'all-paid':paidCount===0?'all-unpaid':'partial'}">${paidCount}/${yearMonths.length}월 납부</span>
+      </div>
+      <div class="hist-grid">${cells}</div>
+    </div>`;
+  }).join('');
+
+  const unpaidList = unpaidMonths.map(({year, month}) => {
+    const expDate = getExpectedPayDate(t, year, month);
+    return `<span onclick="openHistCellEdit(${tenantId},${year},${month})"
+      style="display:inline-flex;align-items:center;gap:4px;background:rgba(247,111,111,.15);color:var(--red);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;margin:2px;cursor:pointer">
+      ${year}년 ${month}월 <span style="font-size:10px;opacity:.7">(예정 ${expDate.slice(5)})</span> ✎
+    </span>`;
+  }).join('');
+
+  document.getElementById('hist-title').textContent = `📋 ${t.name} 납부 이력`;
+  document.getElementById('hist-building').textContent = `${t.building} ${t.unit}`;
+  document.getElementById('hist-rent').textContent = `월세 ${W(t.rent+t.mgmt)} · ${payTypeLabel}${rfLabel}`;
+  document.getElementById('hist-streak').innerHTML = streak > 0
+    ? `<span style="color:var(--red);font-weight:900">⚠ ${unpaidStart}부터 ${streak}개월 연속 미납</span>`
+    : `<span style="color:var(--green)">✓ 현재 연속 미납 없음</span>`;
+  document.getElementById('hist-summary').innerHTML = totalUnpaid > 0
+    ? `총 <b style="color:var(--red)">${totalUnpaid}개월</b> 미납 · 누적 <b style="color:var(--red)">${W(totalUnpaidAmt)}</b>`
+    : `<span style="color:var(--green)">전월 완납</span>`;
+  document.getElementById('hist-all-years').innerHTML = allCells;
+  document.getElementById('hist-unpaid-list').innerHTML = totalUnpaid > 0 ? unpaidList : '<span style="color:var(--green)">미납 없음</span>';
+  document.getElementById('hist-pay-btn').setAttribute('onclick', `event.stopPropagation();quickPayFromHistory(${tenantId})`);
+  document.getElementById('hist-modal').classList.add('show');
+}
+
+// ─── 납부이력 셀 터치 → 해당 월 편집 ───
+let _histCellTenantId=null, _histCellYear=null, _histCellMonth=null;
+function openHistCellEdit(tenantId, year, month) {
+  const t = getTenant(tenantId);
+  if (!t) return;
+  _histCellTenantId=tenantId; _histCellYear=year; _histCellMonth=month;
+  const pay = getPayment(tenantId, year, month);
+  const rf  = isRentFree(t, year, month);
+  const expDate = getExpectedPayDate(t, year, month);
+
+  document.getElementById('hce-title').textContent = `${year}년 ${month}월 · ${t.name}`;
+  document.getElementById('hce-label').textContent =
+    rf ? '🆓 렌트프리 (면제)' :
+    `${(t.payType||'후불')==='선불'?'선불':'후불'} · 예정일 ${expDate}`;
+  document.getElementById('hce-label').style.background = rf
+    ? 'rgba(5,150,105,.12)' : 'rgba(79,142,247,.1)';
+  document.getElementById('hce-label').style.color = rf ? 'var(--green)' : 'var(--accent)';
+
+  // 입금 폼 섹션 표시/숨김
+  const formSection = document.getElementById('hce-form-section');
+  formSection.style.display = rf ? 'none' : 'block';
+
+  document.getElementById('hce-date').value   = pay && !rf ? pay.date : expDate;
+  document.getElementById('hce-amount').value = pay && !rf ? pay.amount : (t.rent+t.mgmt);
+  document.getElementById('hce-bank').value   = pay && !rf ? (pay.bank||'기타') : '기타';
+  document.getElementById('hce-memo').value   = pay && !rf ? (pay.memo||'') : `${year}년 ${month}월 월세`;
+
+  // 특별 렌트프리(payment 타입) 삭제 버튼: 계약 RF는 세입자 정보에서 수정
+  const isSpecialRF = pay && pay.type==='rentfree';
+  document.getElementById('hce-delete-btn').style.display = (pay && !rf) ? 'block' : 'none';
+  document.getElementById('hce-rf-section').style.display = 'block';
+  document.getElementById('hce-rf-toggle-btn').textContent = rf
+    ? (isSpecialRF ? '🆓 렌트프리 해제' : '🔒 계약 렌트프리 (세입자정보에서 수정)')
+    : '🆓 이 달 렌트프리로 지정';
+  document.getElementById('hce-rf-toggle-btn').style.background = rf
+    ? 'rgba(220,38,38,.10)' : 'rgba(5,150,105,.10)';
+  document.getElementById('hce-rf-toggle-btn').style.color = rf ? 'var(--red)' : 'var(--green)';
+  document.getElementById('hce-rf-toggle-btn').style.borderColor = rf
+    ? 'rgba(220,38,38,.3)' : 'rgba(5,150,105,.3)';
+  // 계약 RF인 경우 토글 불가 (disabled처럼)
+  const isContractRF = rf && !isSpecialRF;
+  document.getElementById('hce-rf-toggle-btn').onclick = isContractRF
+    ? ()=>showToast('계약 렌트프리는 세입자 정보에서 수정하세요', true)
+    : ()=>toggleSpecialRF(tenantId, year, month);
+
+  document.getElementById('hce-save-btn').textContent = pay && !rf ? '💾 수정 저장' : '✅ 입금 확인';
+  document.getElementById('hce-save-btn').style.display = rf ? 'none' : 'block';
+  document.getElementById('hist-cell-edit-modal').classList.add('show');
+}
+function saveHistCellEdit() {
+  const tenantId=_histCellTenantId, year=_histCellYear, month=_histCellMonth;
+  const date   = document.getElementById('hce-date').value;
+  const amount = parseInt(document.getElementById('hce-amount').value)||0;
+  const bank   = document.getElementById('hce-bank').value;
+  const memo   = document.getElementById('hce-memo').value;
+  if (!date) { showToast('날짜를 입력해주세요', true); return; }
+
+  const existing = getPayment(tenantId, year, month);
+  if (existing) {
+    existing.date=date; existing.amount=amount; existing.bank=bank; existing.memo=memo;
+  } else {
+    const nid = (payments.reduce((mx,p)=>Math.max(mx,p.id),0))+1;
+    payments.push({id:nid, tenantId, year, month, date, amount, bank, memo});
+  }
+  save();
+  closeSheet('hist-cell-edit-modal');
+  openTenantHistory(tenantId);  // 이력 새로고침
+  renderDashboard(); renderMonthly();
+  showToast(`✓ ${year}년 ${month}월 저장됐습니다`);
+}
+function deleteHistCellPay() {
+  const tenantId=_histCellTenantId, year=_histCellYear, month=_histCellMonth;
+  if (!confirm(`${year}년 ${month}월 입금 기록을 삭제할까요?`)) return;
+  payments = payments.filter(p=>!(p.tenantId===tenantId && p.year===year && p.month===month));
+  save();
+  closeSheet('hist-cell-edit-modal');
+  openTenantHistory(tenantId);
+  renderDashboard(); renderMonthly();
+  showToast(`${year}년 ${month}월 기록 삭제됨`);
+}
+function toggleSpecialRF(tenantId, year, month) {
+  const pay = getPayment(tenantId, year, month);
+  if (pay && pay.type === 'rentfree') {
+    // 해제
+    payments = payments.filter(p=>!(p.tenantId===tenantId&&p.year===year&&p.month===month));
+    showToast(`${year}년 ${month}월 렌트프리 해제됨`);
+  } else {
+    // 기존 입금기록 제거 후 렌트프리로
+    payments = payments.filter(p=>!(p.tenantId===tenantId&&p.year===year&&p.month===month));
+    const nid = (payments.reduce((mx,p)=>Math.max(mx,p.id),0))+1;
+    payments.push({id:nid, tenantId, year, month, date:`${year}-${String(month).padStart(2,'0')}-01`, amount:0, bank:'렌트프리', memo:'렌트프리', type:'rentfree'});
+    showToast(`🆓 ${year}년 ${month}월 렌트프리 지정됨`);
+  }
+  save();
+  closeSheet('hist-cell-edit-modal');
+  openTenantHistory(tenantId);
+  renderDashboard(); renderMonthly();
+}
+function quickPayFromHistory(tenantId) {
+  closeSheet('hist-modal');
+  quickPay(tenantId);
+}
+
+// ─── Swipe Navigation ───
+const PAGE_ORDER = ['dashboard','monthly','log','tenants','yearly'];
+let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
+
+document.getElementById('scroll-area').addEventListener('touchstart', e => {
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeStartTime = Date.now();
+}, {passive: true});
+
+document.getElementById('scroll-area').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  const dy = e.changedTouches[0].clientY - swipeStartY;
+  const dt = Date.now() - swipeStartTime;
+  // 가로 스와이프만 처리: 빠르고(300ms), 충분히 길고(60px), 세로보다 가로가 큰 경우
+  if (dt > 350 || Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+  const cur = PAGE_ORDER.findIndex(p => document.getElementById('page-'+p).classList.contains('active'));
+  if (dx < 0 && cur < PAGE_ORDER.length - 1) showPage(PAGE_ORDER[cur + 1]); // 왼쪽 → 다음
+  if (dx > 0 && cur > 0) showPage(PAGE_ORDER[cur - 1]); // 오른쪽 → 이전
+}, {passive: true});
+
+// ─── Exit Confirmation ───
+window.addEventListener('beforeunload', e => {
+  e.preventDefault();
+  e.returnValue = '앱을 종료할까요?';
+  return '앱을 종료할까요?';
+});
+
+// 안드로이드 뒤로가기 버튼
+window.addEventListener('popstate', () => {
+  const cur = PAGE_ORDER.findIndex(p => document.getElementById('page-'+p).classList.contains('active'));
+  // 모달이 열려 있으면 먼저 닫기
+  const openModal = document.querySelector('.overlay.show');
+  if (openModal) { openModal.classList.remove('show'); history.pushState(null,'',location.href); return; }
+  if (cur > 0) {
+    showPage(PAGE_ORDER[cur - 1]);
+    history.pushState(null,'',location.href);
+  } else {
+    // 첫 화면에서 뒤로 → 종료 확인
+    if (confirm('앱을 종료할까요?')) { history.back(); }
+    else { history.pushState(null,'',location.href); }
+  }
+});
+history.pushState(null,'',location.href);
+
+// ─── Init ───
+document.getElementById('log-date').value  = new Date().toISOString().split('T')[0];
+document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
+populatePaySelect();
+populateLogSelect();
+renderDashboard();
+// Firebase에서 최신 데이터 불러오기 (동기화)
+loadFromFirebase();
+</script>
+<!-- 납부이력 Modal -->
+<div class="overlay" id="hist-modal">
+  <div class="sheet" style="max-height:88vh">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="sheet-title" id="hist-title" style="margin-bottom:0">📋 납부 이력</div>
+      <button onclick="closeSheet('hist-modal')" style="background:none;border:none;color:var(--text2);font-size:22px;padding:4px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span id="hist-building" style="font-size:12px;color:var(--accent);background:rgba(79,142,247,.1);padding:3px 10px;border-radius:20px"></span>
+      <span id="hist-rent" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div class="hist-streak-box" id="hist-streak"></div>
+    <div class="hist-summary-box" id="hist-summary"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">전체 납부현황 (계약 시작부터)</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:900;color:#fff;-webkit-text-fill-color:#fff;background:#1d4ed8;border-radius:6px;padding:4px 11px;border:2px solid #1e40af">🔵 완납</span>
+      <span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:900;color:#1a0f00;-webkit-text-fill-color:#1a0f00;background:#f59e0b;border-radius:6px;padding:4px 11px;border:2px solid #d97706">🟡 렌트프리</span>
+      <span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:900;color:#fff;-webkit-text-fill-color:#fff;background:#b91c1c;border-radius:6px;padding:4px 11px;border:2px solid #991b1b">🔴 미납</span>
+    </div>
+    <div id="hist-all-years"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px">미납 월 목록</div>
+    <div id="hist-unpaid-list" style="margin-bottom:16px"></div>
+    <button class="btn-full" id="hist-pay-btn" style="background:var(--red)">💰 이번달 입금확인</button>
+    <button class="btn-full" style="background:var(--surface2);color:var(--text2);margin-top:8px" onclick="closeSheet('hist-modal')">닫기</button>
+  </div>
+</div>
+
+<!-- 납부이력 셀 편집 Modal -->
+<div class="overlay" id="hist-cell-edit-modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="sheet-title" id="hce-title" style="margin-bottom:0">📅 납부 수정</div>
+      <button onclick="closeSheet('hist-cell-edit-modal')" style="background:none;border:none;color:var(--text2);font-size:22px;padding:4px;cursor:pointer">✕</button>
+    </div>
+    <div id="hce-label" style="font-size:12px;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:14px"></div>
+
+    <!-- 렌트프리 토글 -->
+    <div id="hce-rf-section" style="margin-bottom:12px">
+      <button id="hce-rf-toggle-btn" class="btn-full"
+        style="border:1px solid;border-radius:10px;padding:11px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer">
+        🆓 이 달 렌트프리로 지정
+      </button>
+    </div>
+
+    <!-- 입금 폼 -->
+    <div id="hce-form-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">입금일</label>
+          <input type="date" class="form-input" id="hce-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">금액 (원)</label>
+          <input type="number" class="form-input" id="hce-amount" inputmode="numeric">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">은행</label>
+        <select class="form-input" id="hce-bank">
+          <option>카카오뱅크</option><option>신한은행</option><option>국민은행</option>
+          <option>우리은행</option><option>하나은행</option><option>기업은행</option>
+          <option>농협</option><option>현금</option><option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모</label>
+        <input class="form-input" id="hce-memo" placeholder="1월 월세">
+      </div>
+      <button class="btn-full" id="hce-save-btn" onclick="saveHistCellEdit()">✅ 입금 확인</button>
+      <button class="btn-full" id="hce-delete-btn" onclick="deleteHistCellPay()"
+        style="background:rgba(220,38,38,.1);color:var(--red);border:1px solid rgba(220,38,38,.3);margin-top:8px;display:none">
+        🗑 이 달 기록 삭제
+      </button>
+    </div>
+
+    <button class="btn-full" onclick="closeSheet('hist-cell-edit-modal')"
+      style="background:var(--surface2);color:var(--text2);margin-top:8px">닫기</button>
+  </div>
+</div>
+
+</body>
+</html>
