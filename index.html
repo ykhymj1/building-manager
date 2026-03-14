@@ -1583,10 +1583,60 @@ history.pushState(null,'',location.href);
     if (p.tenantId === 8) {
       const ym = p.year * 100 + p.month;
       const correctAmt = ym <= 202512 ? 3800000 : 4180000;
-      // 구 금액(3800000)이 2026년 이후에 있으면 4180000으로 보정
       if (p.amount === 3800000 && ym >= 202601) p.amount = 4180000;
     }
   });
+})();
+
+// 세입자 start 날짜 마이그레이션 (localStorage 기존 데이터 보정)
+(function migrateTenantStartDates() {
+  const correctStarts = {
+    1:  '2020-12-01',  // 이용진
+    2:  '2025-06-01',  // 장경아
+    3:  '2020-05-01',  // 김영건
+    4:  '2020-01-01',  // 김충선
+    5:  '2025-12-01',  // 허성은
+    6:  '2021-09-01',  // 미스터피자
+    7:  '2022-01-01',  // 김정식
+    8:  '2022-01-01',  // 박수철
+    9:  '2023-06-01',  // 전훈철
+    10: '2023-06-01',  // 김정해
+  };
+  tenants.forEach(t => {
+    if (correctStarts[t.id] && t.start !== correctStarts[t.id]) {
+      t.start = correctStarts[t.id];
+    }
+  });
+  // 렌트프리 레코드도 보정 (없으면 추가)
+  const rfNeeded = [
+    {tenantId:5,  year:2026, month:1,  date:'2026-01-17', memo:'2026년 1월 렌트프리'},
+    {tenantId:6,  year:2025, month:10, date:'2025-10-01', memo:'2025년 10월 렌트프리'},
+    {tenantId:10, year:2023, month:6,  date:'2023-06-01', memo:'2023년 6월 렌트프리'},
+    {tenantId:10, year:2023, month:7,  date:'2023-07-01', memo:'2023년 7월 렌트프리'},
+  ];
+  rfNeeded.forEach(rf => {
+    const exists = payments.find(p => p.tenantId===rf.tenantId && p.year===rf.year && p.month===rf.month);
+    if (!exists) {
+      payments.push({id: Date.now() + Math.random(), tenantId:rf.tenantId, year:rf.year, month:rf.month,
+        date:rf.date, amount:0, bank:'렌트프리', memo:rf.memo, type:'rentfree'});
+    }
+  });
+  // 계약 전(start 이전) 잘못된 payment 레코드 삭제
+  const startYmMap = {};
+  tenants.forEach(t => {
+    if (t.start) {
+      const sd = new Date(t.start);
+      startYmMap[t.id] = sd.getFullYear() * 100 + (sd.getMonth() + 1);
+    }
+  });
+  const before = payments.length;
+  payments = payments.filter(p => {
+    const startYm = startYmMap[p.tenantId];
+    if (!startYm) return true;
+    const pYm = p.year * 100 + p.month;
+    return pYm >= startYm; // start월 이전 레코드 제거
+  });
+
 })();
 
 
