@@ -410,13 +410,13 @@ html, body {
         <div class="card-value yellow" id="d-target">계산중</div>
         <div class="card-sub">월세+관리비</div>
       </div>
-      <div class="card green">
-        <div class="card-label">납부완료</div>
+      <div class="card green" onclick="showTenantPopup('paid')" style="cursor:pointer">
+        <div class="card-label">납부완료 <span style="font-size:10px;opacity:.6">▶</span></div>
         <div class="card-value green" id="d-paid">0명</div>
         <div class="card-sub" id="d-paid-amt">₩0</div>
       </div>
-      <div class="card red">
-        <div class="card-label">미납</div>
+      <div class="card red" onclick="showTenantPopup('unpaid')" style="cursor:pointer">
+        <div class="card-label">미납 <span style="font-size:10px;opacity:.6">▶</span></div>
         <div class="card-value red" id="d-unpaid">11명</div>
         <div class="card-sub" id="d-unpaid-sub">확인필요</div>
       </div>
@@ -883,6 +883,59 @@ function importData(event) {
   reader.readAsText(file);
   // 같은 파일 다시 선택 가능하도록 초기화
   event.target.value = '';
+}
+
+
+// ─── 대시보드 납부완료/미납 팝업 ───
+function showTenantPopup(type) {
+  const isPaid = type === 'paid';
+  const title = isPaid ? '✅ 납부완료' : '🔴 미납';
+  const color = isPaid ? 'var(--green)' : 'var(--red)';
+
+  // 대상 세입자 필터
+  const targets = tenants.filter(t => isPayTarget(t, curYear, curMonth));
+  let list;
+  if (isPaid) {
+    list = targets.filter(t => isPaidOrFree(t, curYear, curMonth));
+  } else {
+    list = targets.filter(t => !isPaidOrFree(t, curYear, curMonth));
+  }
+
+  document.getElementById('tenant-popup-title').innerHTML =
+    `<span style="color:${color}">${title}</span> <span style="font-size:13px;color:var(--text2);font-weight:500">${curYear}년 ${curMonth}월 · ${list.length}명</span>`;
+
+  if (list.length === 0) {
+    document.getElementById('tenant-popup-list').innerHTML =
+      `<div style="text-align:center;padding:24px;color:var(--text2);font-size:14px">${isPaid ? '납부완료 세입자가 없습니다' : '🎉 전원 납부완료!'}</div>`;
+  } else {
+    document.getElementById('tenant-popup-list').innerHTML = list.map(t => {
+      const pay = getPayment(t.id, curYear, curMonth);
+      const rf  = isRentFree(t, curYear, curMonth);
+      const rentAmt = getRentForMonth(t, curYear, curMonth) + t.mgmt;
+      const statusBadge = rf
+        ? `<span style="background:#f59e0b;color:#1a0f00;-webkit-text-fill-color:#1a0f00;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900">🆓 렌트프리</span>`
+        : isPaid
+          ? `<span style="background:rgba(5,150,105,.12);color:var(--green);-webkit-text-fill-color:var(--green);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900">✅ ${pay ? pay.date : ''}</span>`
+          : `<span style="background:rgba(220,38,38,.10);color:var(--red);-webkit-text-fill-color:var(--red);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900">미납</span>`;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)" onclick="closeSheet('tenant-popup-modal');openTenantHistory(${t.id})">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700">${t.name}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${t.building} ${t.unit} · 🏦${t.bank||'-'}</div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div style="font-size:14px;font-weight:700">${W(rentAmt)}</div>
+          ${statusBadge}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('tenant-popup-modal').classList.add('show');
+}
+function closeTenantPopup(e) {
+  if (e.target === document.getElementById('tenant-popup-modal')) {
+    closeSheet('tenant-popup-modal');
+  }
 }
 
 function renderDashboard() {
@@ -1691,5 +1744,16 @@ loadFromFirebase();
   </div>
 </div>
 
+
+<!-- 납부완료/미납 세입자 팝업 -->
+<div class="overlay" id="tenant-popup-modal" onclick="closeTenantPopup(event)">
+  <div class="sheet" style="max-height:70vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div id="tenant-popup-title" class="sheet-title" style="font-size:16px;font-weight:900;margin-bottom:12px"></div>
+    <div id="tenant-popup-list"></div>
+    <button class="btn-full" onclick="closeSheet('tenant-popup-modal')"
+      style="background:var(--surface2);color:var(--text2);margin-top:12px">닫기</button>
+  </div>
+</div>
 </body>
 </html>
