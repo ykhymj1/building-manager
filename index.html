@@ -592,8 +592,8 @@ html, body {
       <div class="form-group">
         <label class="form-label">납부방식</label>
         <select class="form-input" id="t-pay-type">
-          <option value="후불">후불 (당월 납부)</option>
-          <option value="선불">선불 (익월 선납)</option>
+          <option value="후불">후불 (익월 납부 - 당월 발생)</option>
+          <option value="선불">선불 (당월 납부)</option>
         </select>
       </div>
       <div class="form-group">
@@ -645,7 +645,7 @@ html, body {
 // ─── Data ───
 const DEFAULT_TENANTS = [
   {id:1, building:"연신내", unit:"1층", name:"이용진", phone:"", bank:"신한은행", start:"2020-12-01", end:"2027-12-31", rent:800000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:1},
-  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", bank:"신한은행", start:"2025-07-01", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
+  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", bank:"신한은행", start:"2025-06-01", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
   {id:3, building:"연신내", unit:"3층", name:"김영건", phone:"", bank:"신한은행", start:"2020-05-01", end:"2027-12-31", rent:510000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:13},
   {id:4, building:"연신내", unit:"4층", name:"김충선", phone:"", bank:"신한은행", start:"2020-01-01", end:"2027-12-31", rent:400000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:16},
   {id:5, building:"연신내", unit:"5층A", name:"허성은", phone:"", bank:"신한은행", start:"2025-12-01", end:"2025-12-17", rent:310000, mgmt:0, deposit:3000000, note:"선불, 2021.6월부터 미납이력", payType:"선불", payDay:17, rfMonths:1, rfStart:"2026-01"},
@@ -724,7 +724,8 @@ function getRentForMonth(t, year, month) {
   return t.rent;
 }
 
-// 메모 기본값: 김정해(10), 전훈철(9), 허성은(5) → 당월 월세 / 나머지 → 전달 월세
+// 메모 기본값: 김정해(10), 전훈철(9), 허성은(5) → 당월 월세 (선불식)
+// 나머지 후불 세입자 → 전달 월세 (N+1월에 N월치 납부)
 const SAME_MONTH_IDS = [5, 9, 10];
 function getDefaultMemo(tenantId, year, month) {
   if (SAME_MONTH_IDS.includes(tenantId)) {
@@ -1302,19 +1303,19 @@ function dragEnd(e) {
 }
 
 // ─── Tenant History Modal ───
-// 선불: N월 월세를 N-1월 payDay에 납부  /  후불: N월 월세를 N월 payDay에 납부
+// 후불: N월 월세를 N+1월 payDay에 납부  /  선불: N월 월세를 N월 payDay에 납부
 function getExpectedPayDate(t, year, month) {
   const day = t.payDay || 1;
   if ((t.payType||'후불') === '선불') {
-    // 선불: 전달 payDay에 납부
-    let y = year, m = month - 1;
-    if (m < 1) { m = 12; y--; }
-    const maxDay = new Date(y, m, 0).getDate();
-    return `${y}-${String(m).padStart(2,'0')}-${String(Math.min(day,maxDay)).padStart(2,'0')}`;
-  } else {
-    // 후불: 당월 payDay에 납부
+    // 선불: N월 월세 → N월 payDay에 납부 (당월)
     const maxDay = new Date(year, month, 0).getDate();
     return `${year}-${String(month).padStart(2,'0')}-${String(Math.min(day,maxDay)).padStart(2,'0')}`;
+  } else {
+    // 후불: N월 월세 → N+1월 payDay에 납부 (다음달)
+    let y = year, m = month + 1;
+    if (m > 12) { m = 1; y++; }
+    const maxDay = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2,'0')}-${String(Math.min(day,maxDay)).padStart(2,'0')}`;
   }
 }
 
@@ -1360,8 +1361,8 @@ function openTenantHistory(tenantId) {
   });
 
   const payTypeLabel = (t.payType||'후불') === '선불'
-    ? `선불 · 매월 ${t.payDay||1}일 (전달 납부)`
-    : `후불 · 매월 ${t.payDay||1}일`;
+    ? `선불 · 매월 ${t.payDay||1}일 (당월 납부)`
+    : `후불 · 매월 ${t.payDay||1}일 (익월 납부)`;
   const rfLabel = t.rfMonths > 0 && t.rfStart
     ? ` · 계약RF ${t.rfStart}~${t.rfMonths}개월` : '';
 
@@ -1439,7 +1440,7 @@ function openHistCellEdit(tenantId, year, month) {
   document.getElementById('hce-title').textContent = `${year}년 ${month}월 · ${t.name}`;
   document.getElementById('hce-label').textContent =
     rf ? '🆓 렌트프리 (면제)' :
-    `${(t.payType||'후불')==='선불'?'선불':'후불'} · 예정일 ${expDate}`;
+    `${(t.payType||'후불')==='선불'?'선불(당월납부)':'후불(익월납부)'} · 예정일 ${expDate}`;
   document.getElementById('hce-label').style.background = rf
     ? 'rgba(5,150,105,.12)' : 'rgba(79,142,247,.1)';
   document.getElementById('hce-label').style.color = rf ? 'var(--green)' : 'var(--accent)';
@@ -1588,7 +1589,7 @@ function applyMigrations() {
   });
   // 2. 세입자 start 날짜 보정
   const correctStarts = {
-    1:'2020-12-01', 2:'2025-07-01', 3:'2020-05-01', 4:'2020-01-01',
+    1:'2020-12-01', 2:'2025-06-01', 3:'2020-05-01', 4:'2020-01-01',
     5:'2025-12-01', 6:'2021-09-01', 7:'2022-01-01', 8:'2022-01-01',
     9:'2023-06-01', 10:'2023-06-01'
   };
