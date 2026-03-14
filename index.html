@@ -645,7 +645,7 @@ html, body {
 // ─── Data ───
 const DEFAULT_TENANTS = [
   {id:1, building:"연신내", unit:"1층", name:"이용진", phone:"", bank:"신한은행", start:"2020-12-01", end:"2027-12-31", rent:800000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:1},
-  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", bank:"신한은행", start:"2025-06-01", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
+  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", bank:"신한은행", start:"2025-07-01", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
   {id:3, building:"연신내", unit:"3층", name:"김영건", phone:"", bank:"신한은행", start:"2020-05-01", end:"2027-12-31", rent:510000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:13},
   {id:4, building:"연신내", unit:"4층", name:"김충선", phone:"", bank:"신한은행", start:"2020-01-01", end:"2027-12-31", rent:400000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:16},
   {id:5, building:"연신내", unit:"5층A", name:"허성은", phone:"", bank:"신한은행", start:"2025-12-01", end:"2025-12-17", rent:310000, mgmt:0, deposit:3000000, note:"선불, 2021.6월부터 미납이력", payType:"선불", payDay:17, rfMonths:1, rfStart:"2026-01"},
@@ -1588,7 +1588,7 @@ function applyMigrations() {
   });
   // 2. 세입자 start 날짜 보정
   const correctStarts = {
-    1:'2020-12-01', 2:'2025-06-01', 3:'2020-05-01', 4:'2020-01-01',
+    1:'2020-12-01', 2:'2025-07-01', 3:'2020-05-01', 4:'2020-01-01',
     5:'2025-12-01', 6:'2021-09-01', 7:'2022-01-01', 8:'2022-01-01',
     9:'2023-06-01', 10:'2023-06-01'
   };
