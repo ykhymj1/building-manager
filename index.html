@@ -384,9 +384,6 @@ html, body {
   font-size: 15px; color: var(--text); pointer-events: none;
 }
 </style>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -673,16 +670,16 @@ html, body {
 <script>
 // ─── Data ───
 const DEFAULT_TENANTS = [
-  {id:1, building:"연신내", unit:"1층", name:"이용진", phone:"", start:"2021-08-01", end:"2027-12-31", rent:800000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:1},
-  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", start:"2020-04-12", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
-  {id:3, building:"연신내", unit:"3층", name:"김영건", phone:"", start:"2021-08-01", end:"2027-12-31", rent:510000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:13},
-  {id:4, building:"연신내", unit:"4층", name:"김충선", phone:"", start:"2021-08-01", end:"2027-12-31", rent:400000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:16},
-  {id:5, building:"연신내", unit:"5층A", name:"허성은", phone:"", start:"2021-08-01", end:"2025-12-17", rent:310000, mgmt:0, deposit:3000000, note:"선불, 2021.6월부터 미납이력", payType:"선불", payDay:17},
-  {id:9, building:"연신내", unit:"4층B", name:"전훈철", phone:"", start:"2023-06-01", end:"2027-12-31", rent:3630000, mgmt:0, deposit:20000000, note:"2023.6월 입주", payType:"후불", payDay:31},
-  {id:10, building:"연신내", unit:"5층B", name:"김정해", phone:"", start:"2023-05-31", end:"2027-12-31", rent:3300000, mgmt:0, deposit:30000000, note:"에듀 총330만(250+50+30)", payType:"후불", payDay:1},
-  {id:6, building:"봉천동 연세", unit:"상가1", name:"미스터피자", phone:"", start:"2021-08-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:40000000, note:"봉천동 37-86", payType:"후불", payDay:1},
-  {id:7, building:"봉천동 연세", unit:"상가2", name:"김정식", phone:"", start:"2022-01-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:30000000, note:"미가면옥, 봉천동 37-86", payType:"후불", payDay:10},
-  {id:8, building:"봉천동 연세", unit:"상가3", name:"박수철", phone:"010-8599-3721", start:"2022-01-01", end:"2027-12-31", rent:3800000, mgmt:0, deposit:50000000, note:"실명 박기철, 봉천동 37-86, 계약 2022.9.15", payType:"후불", payDay:15}
+  {id:1, building:"연신내", unit:"1층", name:"이용진", phone:"", bank:"신한은행", start:"2021-08-01", end:"2027-12-31", rent:800000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:1},
+  {id:2, building:"연신내", unit:"2층", name:"장경아", phone:"010-9147-2784", bank:"신한은행", start:"2020-04-12", end:"2027-05-09", rent:510000, mgmt:0, deposit:10000000, note:"후불, 갱신계약 2025.5.9~2027.5.9", payType:"후불", payDay:25},
+  {id:3, building:"연신내", unit:"3층", name:"김영건", phone:"", bank:"신한은행", start:"2021-08-01", end:"2027-12-31", rent:510000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:13},
+  {id:4, building:"연신내", unit:"4층", name:"김충선", phone:"", bank:"신한은행", start:"2021-08-01", end:"2027-12-31", rent:400000, mgmt:0, deposit:10000000, note:"", payType:"후불", payDay:16},
+  {id:5, building:"연신내", unit:"5층A", name:"허성은", phone:"", bank:"신한은행", start:"2021-08-01", end:"2025-12-17", rent:310000, mgmt:0, deposit:3000000, note:"선불, 2021.6월부터 미납이력", payType:"선불", payDay:17},
+  {id:9, building:"연신내", unit:"4층B", name:"전훈철", phone:"", bank:"신한은행", start:"2023-06-01", end:"2027-12-31", rent:3630000, mgmt:0, deposit:20000000, note:"2023.6월 입주", payType:"후불", payDay:31},
+  {id:10, building:"연신내", unit:"5층B", name:"김정해", phone:"", bank:"신한은행", start:"2023-05-31", end:"2027-12-31", rent:3300000, mgmt:0, deposit:30000000, note:"에듀 총330만(250+50+30)", payType:"후불", payDay:1},
+  {id:6, building:"봉천동 연세", unit:"상가1", name:"미스터피자", phone:"", bank:"카카오뱅크", start:"2021-08-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:40000000, note:"봉천동 37-86", payType:"후불", payDay:1},
+  {id:7, building:"봉천동 연세", unit:"상가2", name:"김정식", phone:"", bank:"카카오뱅크", start:"2022-01-01", end:"2027-12-31", rent:4400000, mgmt:0, deposit:30000000, note:"미가면옥, 봉천동 37-86", payType:"후불", payDay:10},
+  {id:8, building:"봉천동 연세", unit:"상가3", name:"박수철", phone:"010-8599-3721", bank:"카카오뱅크", start:"2022-01-01", end:"2027-12-31", rent:3800000, mgmt:0, deposit:50000000, note:"실명 박기철, 봉천동 37-86, 계약 2022.9.15", payType:"후불", payDay:15}
 ];
 
 
@@ -701,51 +698,44 @@ let tSearch  = '';
 let nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
 let editingId = null;
 
-// ── Firebase 초기화 ──
-const firebaseConfig = {
-  databaseURL: "https://mymonth-6cd61-default-rtdb.firebaseio.com"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+// ── Firebase REST API 동기화 ──
+const FB_URL = "https://mymonth-6cd61-default-rtdb.firebaseio.com/mymonth.json";
 
-// Firebase에서 데이터 불러오기 (앱 시작 시)
 function loadFromFirebase() {
   showToast('🔄 데이터 동기화 중...');
-  db.ref('mymonth').once('value').then(snapshot => {
-    const data = snapshot.val();
-    if (data) {
-      tenants  = data.tenants  || tenants;
-      payments = data.payments || payments;
-      logs     = data.logs     || logs;
-      nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
-    }
-    // localStorage에도 백업
-    localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
-    localStorage.setItem('rm_payments', JSON.stringify(payments));
-    localStorage.setItem('rm_logs',     JSON.stringify(logs));
-    renderDashboard();
-    renderMonthly();
-    renderTenants();
-    renderYearly();
-    showToast('✅ 동기화 완료');
-  }).catch(() => {
-    showToast('⚠️ 오프라인 - 로컬 데이터 사용 중');
-  });
+  fetch(FB_URL)
+    .then(r => r.json())
+    .then(data => {
+      if (data) {
+        tenants  = data.tenants  || tenants;
+        payments = data.payments || payments;
+        logs     = data.logs     || logs;
+        nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+      }
+      localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
+      localStorage.setItem('rm_payments', JSON.stringify(payments));
+      localStorage.setItem('rm_logs',     JSON.stringify(logs));
+      renderDashboard();
+      renderMonthly();
+      renderTenants();
+      renderYearly();
+      showToast('✅ 동기화 완료');
+    })
+    .catch(() => {
+      showToast('⚠️ 오프라인 - 로컬 데이터 사용 중');
+    });
 }
 
-// Firebase + localStorage 동시 저장
 function save() {
   localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
   localStorage.setItem('rm_payments', JSON.stringify(payments));
   localStorage.setItem('rm_logs',     JSON.stringify(logs));
-  // Firebase에도 저장
-  db.ref('mymonth').set({
-    tenants:  tenants,
-    payments: payments,
-    logs:     logs
-  }).catch(() => {
-    // 오프라인이면 무시 (localStorage에는 저장됨)
-  });
+  // Firebase REST API로 저장
+  fetch(FB_URL, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tenants, payments, logs})
+  }).catch(() => {});
 }
 function W(n) { return '₩' + n.toLocaleString('ko-KR'); }
 function getPayment(tid, y, m) {
@@ -916,9 +906,19 @@ function filterMonthly(f, el) {
   el.classList.add('active');
   renderMonthly();
 }
+// 후불 세입자: 입주 첫달은 납부 대상 아님
+function isPayTarget(t, year, month) {
+  if ((t.payType || '후불') === '후불') {
+    const sd = new Date(t.start);
+    const sy = sd.getFullYear(), sm = sd.getMonth() + 1;
+    if (year === sy && month === sm) return false; // 입주 첫달 제외
+  }
+  return true;
+}
+
 function renderMonthly() {
   document.getElementById('month-label').textContent = `${curYear}년 ${curMonth}월`;
-  let list = tenants;
+  let list = tenants.filter(t => isPayTarget(t, curYear, curMonth));
   if (mFilter==='미납')  list=list.filter(t=>!isPaidOrFree(t,curYear,curMonth));
 
   const el = document.getElementById('monthly-list');
@@ -936,7 +936,7 @@ function renderMonthly() {
     return `<div class="list-item" onclick="openTenantHistory(${t.id})" style="cursor:pointer">
       <div class="list-item-left">
         <div class="list-item-name">${t.name}</div>
-        <div class="list-item-sub">${t.building} ${t.unit}${pay&&!paidSpecial?' · '+pay.date:rf?' · 렌트프리':''}</div>
+        <div class="list-item-sub">${t.building} ${t.unit}${pay&&!paidSpecial?' · '+pay.date:rf?' · 렌트프리':''}${t.bank?' · 🏦'+t.bank:''}</div>
       </div>
       <div class="list-item-right">
         <div class="list-item-amount">${rf?'🆓':W(t.rent+t.mgmt)}</div>
@@ -1069,6 +1069,7 @@ function renderTenants() {
       <div class="tc-row"><span class="tc-key">보증금</span><span class="tc-val">${W(t.deposit)}</span></div>
       <div class="tc-row"><span class="tc-key">계약기간</span><span class="tc-val" style="font-size:11px">${t.start}~${t.end} ${exp}</span></div>
       <div class="tc-row"><span class="tc-key">납부방식</span><span class="tc-val">${t.payType||'후불'} · 매월 ${t.payDay||1}일${t.rfMonths>0?` · 계약RF ${t.rfMonths}개월`:''}</span></div>
+      ${t.bank?`<div class="tc-row"><span class="tc-key">입금은행</span><span class="tc-val">🏦 ${t.bank}</span></div>`:''}
       ${t.note?`<div class="tc-row"><span class="tc-key">메모</span><span class="tc-val" style="color:var(--text2)">${t.note}</span></div>`:''}
       <div class="tc-actions">
         <button class="tc-btn edit" onclick="openEditTenant(${t.id})">✏️ 수정</button>
@@ -1275,8 +1276,13 @@ function openTenantHistory(tenantId) {
   const t = getTenant(tenantId);
   if (!t) return;
   const startDate = new Date(t.start);
-  const startYear = startDate.getFullYear();
-  const startMonth = startDate.getMonth() + 1;
+  let startYear = startDate.getFullYear();
+  let startMonth = startDate.getMonth() + 1;
+  // 후불: 입주 다음달부터 월세 발생
+  if ((t.payType || '후불') === '후불') {
+    startMonth++;
+    if (startMonth > 12) { startMonth = 1; startYear++; }
+  }
   const today = new Date();
   const todayYear = today.getFullYear();
   const todayMonth = today.getMonth() + 1;
