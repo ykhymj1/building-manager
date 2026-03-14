@@ -269,11 +269,13 @@ html, body {
 .yr-total { font-size: 15px; font-weight: 900; color: var(--yellow); }
 .yr-months { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; }
 .yr-month { text-align: center; }
-.yr-month-label { font-size: 9px; color: var(--text3); }
-.yr-month-val { font-size: 10px; font-weight: 700; margin-top: 2px; }
-.yr-month-val.has { color: var(--green); }
+.yr-month-label { font-size: 9px; color: var(--text2); font-weight: 700; }
+.yr-month-val { font-size: 9px; font-weight: 800; margin-top: 2px; }
+.yr-month-val.has { color: #1d4ed8; }
 .yr-month-val.rf  { color: var(--green); font-size: 9px; }
+.yr-month-val.no.unpaid { color: var(--red); font-size: 8px; }
 .yr-month-val.no  { color: var(--text3); }
+.yr-month-val.unpaid { color: var(--red); font-size: 8px; font-weight: 800; }
 
 /* ── Bottom Sheet Modal ── */
 .overlay {
@@ -448,41 +450,7 @@ html, body {
     <div id="monthly-list"></div>
   </div>
 
-  <!-- ── 입금기록 ── -->
-  <div id="page-log" class="page">
-    <div class="log-form">
-      <div class="form-group">
-        <label class="form-label">세입자 선택</label>
-        <select class="form-input" id="log-tenant"></select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">입금일</label>
-          <input type="date" class="form-input" id="log-date">
-        </div>
-        <div class="form-group">
-          <label class="form-label">은행</label>
-          <select class="form-input" id="log-bank">
-            <option>카카오뱅크</option>
-            <option>신한은행</option>
-            <option>기타</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">입금액 (원)</label>
-        <input type="number" class="form-input" id="log-amount" placeholder="예: 850000" inputmode="numeric">
-      </div>
-      <div class="form-group">
-        <label class="form-label">메모</label>
-        <input type="text" class="form-input" id="log-memo" placeholder="1월 월세+관리비">
-      </div>
-      <button class="btn-full" onclick="addLog()">✓ 입금 기록 저장</button>
-    </div>
 
-    <div class="section-title">입금 내역</div>
-    <div id="log-list"><div class="empty">입금 기록이 없습니다</div></div>
-  </div>
 
   <!-- ── 세입자 ── -->
   <div id="page-tenants" class="page">
@@ -519,10 +487,7 @@ html, body {
     <span class="tab-icon">💰</span>
     <span class="tab-label">납부현황</span>
   </button>
-  <button class="tab-item" onclick="showPage('log')">
-    <span class="tab-icon">📝</span>
-    <span class="tab-label">입금기록</span>
-  </button>
+
   <button class="tab-item" onclick="showPage('tenants')">
     <span class="tab-icon">👥</span>
     <span class="tab-label">세입자</span>
@@ -806,7 +771,7 @@ function getTenant(id) { return tenants.find(t => t.id===id); }
 const topbarActions = {
   dashboard: { title:'🏠 월세관리', sub:'', btn:null },
   monthly:   { title:'💰 납부현황', sub:'', btn:{label:'+ 납부입력', fn:'openPayModal()'} },
-  log:       { title:'📝 입금기록', sub:'카카오뱅크·신한은행', btn:null },
+
   tenants:   { title:'👥 세입자 정보', sub:'', btn:{label:'+ 추가', fn:'openTenantModal()'} },
   yearly:    { title:'📅 연간 수입', sub:'', btn:null },
 };
@@ -829,7 +794,7 @@ function showPage(p) {
 
   if (p==='dashboard') renderDashboard();
   if (p==='monthly')   renderMonthly();
-  if (p==='log')       renderLog();
+
   if (p==='tenants')   renderTenants();
   if (p==='yearly')    renderYearly();
 }
@@ -1086,54 +1051,14 @@ function populatePaySelect() {
 }
 
 // ─── Log ───
-function populateLogSelect() {
-  document.getElementById('log-tenant').innerHTML = tenants.map(t=>
-    `<option value="${t.id}">${t.name} (${t.building} ${t.unit})</option>`).join('');
-}
-function addLog() {
-  const date     = document.getElementById('log-date').value;
-  const tenantId = parseInt(document.getElementById('log-tenant').value);
-  const amount   = parseInt(document.getElementById('log-amount').value);
-  const bank     = document.getElementById('log-bank').value;
-  const memo     = document.getElementById('log-memo').value;
-  if (!date||!amount) { showToast('날짜와 금액을 입력해주세요', true); return; }
-
-  const lid = Date.now();
-  logs.push({id:lid, date, tenantId, amount, bank, memo});
-  const d=new Date(date), y=d.getFullYear(), m=d.getMonth()+1;
-  if (!getPayment(tenantId,y,m)) payments.push({id:lid+1,tenantId,year:y,month:m,date,amount,bank,memo});
-  save();
-  document.getElementById('log-amount').value='';
-  document.getElementById('log-memo').value='';
-  renderLog();
-  renderDashboard();
-  showToast('✓ 입금 기록이 저장됐습니다');
-}
+function populateLogSelect() {}
+function addLog() { showToast("입금기록 탭이 삭제됐습니다. 납부현황 또는 세입자 탭을 이용하세요"); }
 function deleteLog(id) {
   if (!confirm('이 입금 기록을 삭제할까요?')) return;
   logs = logs.filter(l=>l.id!==id);
   save(); renderLog();
 }
-function renderLog() {
-  populateLogSelect();
-  const sorted = [...logs].sort((a,b)=>b.date.localeCompare(a.date));
-  const el = document.getElementById('log-list');
-  if (!sorted.length) { el.innerHTML='<div class="empty">입금 기록이 없습니다<br>위 폼에서 입력하세요</div>'; return; }
-  el.innerHTML = sorted.map(l => {
-    const t = getTenant(l.tenantId);
-    return `<div class="log-item">
-      <div style="font-size:20px">🏦</div>
-      <div class="log-item-main">
-        <div class="log-item-name">${t?.name||'?'} <span style="font-size:11px;color:var(--text2)">${t?.building||''} ${t?.unit||''}</span></div>
-        <div class="log-item-sub">${l.date} · ${l.bank}${l.memo?' · '+l.memo:''}</div>
-      </div>
-      <div class="log-item-right">
-        <div class="log-amount">${W(l.amount)}</div>
-        <button class="log-del" onclick="deleteLog(${l.id})">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
+function renderLog() {}
 
 // ─── Tenants ───
 function filterTenantBuilding(f, el) {
@@ -1274,29 +1199,30 @@ function renderYearly() {
   el.innerHTML = tenants.map(t => {
     let total=0;
     const cells=months.map((_,mi)=>{
-      const pay=getPayment(t.id,viewYear,mi+1);
-      const rf=isRentFree(t,viewYear,mi+1);
-      const v=pay&&!rf?pay.amount:0; total+=v;
-      return `<div class="yr-month">
-        <div class="yr-month-label">${mi+1}월</div>
-        <div class="yr-month-val ${rf?'rf':v?'has':'no'}">${rf?'🆓':v?'✓':'—'}</div>
-      </div>`;
+      const m=mi+1;
+      const pay=getPayment(t.id,viewYear,m);
+      const rf=isRentFree(t,viewYear,m);
+      const target=isPayTarget(t,viewYear,m);
+      const v=pay&&!rf&&pay.type!=='rentfree'?pay.amount:0;
+      total+=v;
+      let cls, label;
+      if (!target) {
+        cls='no'; label='ㆍ';
+      } else if (rf) {
+        cls='rf'; label='🆓';
+      } else if (v) {
+        const manUnit = Math.round(v/10000);
+        label = manUnit+'만';
+        cls='has';
+      } else {
+        cls='unpaid'; label='미납';
+      }
+      return '<div class="yr-month"><div class="yr-month-label">'+m+'월</div><div class="yr-month-val '+cls+'">'+label+'</div></div>';
     }).join('');
     grand+=total;
-    return `<div class="yearly-row">
-      <div class="yr-header">
-        <span class="yr-name">${t.name} <span style="font-size:11px;color:var(--text2)">${t.building} ${t.unit}</span></span>
-        <span class="yr-total">${total?W(total):'—'}</span>
-      </div>
-      <div class="yr-months">${cells}</div>
-    </div>`;
+    return '<div class="yearly-row"><div class="yr-header"><span class="yr-name">'+t.name+' <span style="font-size:11px;color:var(--text2)">'+t.building+' '+t.unit+'</span></span><span class="yr-total">'+(total?W(total):'—')+'</span></div><div class="yr-months">'+cells+'</div></div>';
   }).join('') +
-  `<div class="yearly-row" style="border-color:var(--accent)">
-    <div class="yr-header">
-      <span class="yr-name" style="color:var(--accent)">연간 합계</span>
-      <span class="yr-total" style="font-size:18px">${W(grand)}</span>
-    </div>
-  </div>`;
+  '<div class="yearly-row" style="border-color:var(--accent)"><div class="yr-header"><span class="yr-name" style="color:var(--accent)">연간 합계</span><span class="yr-total" style="font-size:18px">'+W(grand)+'</span></div></div>';
 }
 
 // ─── Sheet ───
@@ -1654,7 +1580,7 @@ history.pushState(null,'',location.href);
   });
 })();
 
-document.getElementById('log-date').value  = new Date().toISOString().split('T')[0];
+
 document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
 populatePaySelect();
 populateLogSelect();
