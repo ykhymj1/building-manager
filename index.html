@@ -686,6 +686,7 @@ function loadFromFirebase() {
         logs     = data.logs     || logs;
         nextId   = Math.max(0, ...tenants.map(t=>t.id)) + 1;
       }
+      applyMigrations();
       localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
       localStorage.setItem('rm_payments', JSON.stringify(payments));
       localStorage.setItem('rm_logs',     JSON.stringify(logs));
@@ -1576,38 +1577,25 @@ window.addEventListener('popstate', () => {
 });
 history.pushState(null,'',location.href);
 
-// ─── Init ───
-// 박수철(tenantId:8) 기존 localStorage 데이터 금액 마이그레이션
-(function migrateParkRent() {
+// ─── 데이터 마이그레이션 (init + Firebase 로드 후 매번 실행) ───
+function applyMigrations() {
+  // 1. 박수철 월세 금액 보정
   payments.forEach(p => {
     if (p.tenantId === 8) {
       const ym = p.year * 100 + p.month;
-      const correctAmt = ym <= 202512 ? 3800000 : 4180000;
       if (p.amount === 3800000 && ym >= 202601) p.amount = 4180000;
     }
   });
-})();
-
-// 세입자 start 날짜 마이그레이션 (localStorage 기존 데이터 보정)
-(function migrateTenantStartDates() {
+  // 2. 세입자 start 날짜 보정
   const correctStarts = {
-    1:  '2020-12-01',  // 이용진
-    2:  '2025-06-01',  // 장경아
-    3:  '2020-05-01',  // 김영건
-    4:  '2020-01-01',  // 김충선
-    5:  '2025-12-01',  // 허성은
-    6:  '2021-09-01',  // 미스터피자
-    7:  '2022-01-01',  // 김정식
-    8:  '2022-01-01',  // 박수철
-    9:  '2023-06-01',  // 전훈철
-    10: '2023-06-01',  // 김정해
+    1:'2020-12-01', 2:'2025-06-01', 3:'2020-05-01', 4:'2020-01-01',
+    5:'2025-12-01', 6:'2021-09-01', 7:'2022-01-01', 8:'2022-01-01',
+    9:'2023-06-01', 10:'2023-06-01'
   };
   tenants.forEach(t => {
-    if (correctStarts[t.id] && t.start !== correctStarts[t.id]) {
-      t.start = correctStarts[t.id];
-    }
+    if (correctStarts[t.id]) t.start = correctStarts[t.id];
   });
-  // 렌트프리 레코드도 보정 (없으면 추가)
+  // 3. 렌트프리 레코드 없으면 추가
   const rfNeeded = [
     {tenantId:5,  year:2026, month:1,  date:'2026-01-17', memo:'2026년 1월 렌트프리'},
     {tenantId:6,  year:2025, month:10, date:'2025-10-01', memo:'2025년 10월 렌트프리'},
@@ -1615,13 +1603,12 @@ history.pushState(null,'',location.href);
     {tenantId:10, year:2023, month:7,  date:'2023-07-01', memo:'2023년 7월 렌트프리'},
   ];
   rfNeeded.forEach(rf => {
-    const exists = payments.find(p => p.tenantId===rf.tenantId && p.year===rf.year && p.month===rf.month);
-    if (!exists) {
-      payments.push({id: Date.now() + Math.random(), tenantId:rf.tenantId, year:rf.year, month:rf.month,
+    if (!payments.find(p => p.tenantId===rf.tenantId && p.year===rf.year && p.month===rf.month)) {
+      payments.push({id:Date.now()+Math.random(), tenantId:rf.tenantId, year:rf.year, month:rf.month,
         date:rf.date, amount:0, bank:'렌트프리', memo:rf.memo, type:'rentfree'});
     }
   });
-  // 계약 전(start 이전) 잘못된 payment 레코드 삭제
+  // 4. 계약 전(start 이전) payment 레코드 완전 삭제
   const startYmMap = {};
   tenants.forEach(t => {
     if (t.start) {
@@ -1629,17 +1616,15 @@ history.pushState(null,'',location.href);
       startYmMap[t.id] = sd.getFullYear() * 100 + (sd.getMonth() + 1);
     }
   });
-  const before = payments.length;
   payments = payments.filter(p => {
-    const startYm = startYmMap[p.tenantId];
-    if (!startYm) return true;
-    const pYm = p.year * 100 + p.month;
-    return pYm >= startYm; // start월 이전 레코드 제거
+    const sYm = startYmMap[p.tenantId];
+    if (!sYm) return true;
+    return (p.year * 100 + p.month) >= sYm;
   });
+}
 
-})();
-
-
+// ─── Init ───
+applyMigrations();
 document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
 populatePaySelect();
 populateLogSelect();
