@@ -1459,7 +1459,12 @@ function openHistCellEdit(tenantId, year, month) {
   const defaultRent = getRentForMonth(t, year, month);
   const defaultMemo = getDefaultMemo(tenantId, year, month);
   const defaultBank = t.bank || getDefaultBankForBuilding(t.building);
-  document.getElementById('hce-date').value   = pay && !rf ? pay.date : expDate;
+  // 입금일 기본값: 클릭한 달(year-month)의 payDay
+  const day = t.payDay || 1;
+  const maxDayOfMonth = new Date(year, month, 0).getDate();
+  const defaultDay = Math.min(day, maxDayOfMonth);
+  const defaultDate = `${year}-${String(month).padStart(2,'0')}-${String(defaultDay).padStart(2,'0')}`;
+  document.getElementById('hce-date').value   = pay && !rf ? pay.date : defaultDate;
   document.getElementById('hce-amount').value = pay && !rf ? pay.amount : (defaultRent + t.mgmt);
   document.getElementById('hce-bank').value   = pay && !rf ? (pay.bank || defaultBank) : defaultBank;
   document.getElementById('hce-memo').value   = pay && !rf ? (pay.memo||'') : defaultMemo;
