@@ -1610,7 +1610,7 @@ function applyMigrations() {
       if (p.amount === 3800000 && ym >= 202601) p.amount = 4180000;
     }
   });
-  // 2. 세입자 start·bank 보정
+  // 2. 세입자 start·bank 보정 (표시 기준만, 실제 데이터 삭제 안 함)
   const correctStarts = {
     1:'2020-12-01', 2:'2025-05-10', 3:'2020-04-12', 4:'2015-08-17',
     5:'2025-12-17', 6:'2021-08-01', 7:'2022-10-10', 8:'2022-01-01',
@@ -1634,31 +1634,8 @@ function applyMigrations() {
         date:rf.date, amount:0, bank:'렌트프리', memo:rf.memo, type:'rentfree'});
     }
   });
-  // 4. 계약 전(start월 이전) payment 레코드 삭제
-  // 후불: start월 자체는 월세 발생월이므로 포함, start월 이전만 제거
-  const startYmMap = {};
-  tenants.forEach(t => {
-    if (t.start) {
-      const sd = new Date(t.start);
-      startYmMap[t.id] = sd.getFullYear() * 100 + (sd.getMonth() + 1);
-    }
-  });
-  // 후불: 첫 납부월(start+1) 이전 payment 삭제 / 선불: start월 이전 삭제
-  const firstPayYm = {};
-  tenants.forEach(t => {
-    if (!t.start) return;
-    const sd = new Date(t.start);
-    let sy = sd.getFullYear(), sm = sd.getMonth() + 1;
-    if ((t.payType || '후불') === '후불') {
-      sm++; if (sm > 12) { sm = 1; sy++; }
-    }
-    firstPayYm[t.id] = sy * 100 + sm;
-  });
-  payments = payments.filter(p => {
-    const fYm = firstPayYm[p.tenantId];
-    if (!fYm) return true;
-    return (p.year * 100 + p.month) >= fYm;
-  });
+  // ※ 계약 전 payment 삭제 로직 제거: 실제 입력된 데이터 보호
+  // 화면 표시는 isPayTarget()으로 처리하므로 데이터는 건드리지 않음
 }
 
 // ─── Init ───
