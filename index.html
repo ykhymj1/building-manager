@@ -726,7 +726,7 @@ function getRentForMonth(t, year, month) {
 
 // 메모 기본값: 김정해(10), 전훈철(9), 허성은(5) → 당월 월세 (선불식)
 // 나머지 후불 세입자 → 전달 월세 (N+1월에 N월치 납부)
-const SAME_MONTH_IDS = [5, 9, 10];
+const SAME_MONTH_IDS = [5, 6, 9, 10]; // 허성은, 미스터피자, 전훈철, 김정해: 받는달=해당월 월세
 function getDefaultMemo(tenantId, year, month) {
   if (SAME_MONTH_IDS.includes(tenantId)) {
     return year + "년 " + month + "월 월세";
