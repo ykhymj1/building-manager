@@ -926,15 +926,26 @@ function renderDashboard() {
   const bSubEl = document.getElementById('d-building-sub');
   if (bSubEl) bSubEl.textContent = bSub;
 
-  // 최근 입금 3건: year/month 기준 정렬 (date값 신뢰 안 함)
-  // 새로 입력한 항목(id가 클수록 최신)을 우선시
-  const recentPays = payments
-    .filter(p => p.type !== 'rentfree')
+  // 최근 입금 3건: 세입자별 가장 최근 입금일(date) 기준 상위 3명
+  // 새로 입력한 데이터는 정확한 date가 들어오므로 date 기준이 올바름
+  const latestByTenant = {};
+  payments
+    .filter(p => p.type !== 'rentfree' && p.date)
+    .forEach(p => {
+      const prev = latestByTenant[p.tenantId];
+      // date 내림차순, 같은 date면 납부월(ym) 내림차순
+      const pYm = p.year * 100 + p.month;
+      const prevYm = prev ? prev.year * 100 + prev.month : 0;
+      if (!prev
+          || p.date > prev.date
+          || (p.date === prev.date && pYm > prevYm)) {
+        latestByTenant[p.tenantId] = p;
+      }
+    });
+  const recentPays = Object.values(latestByTenant)
     .sort((a, b) => {
-      // 연/월 내림차순, 같으면 id 내림차순(나중에 입력한 것 우선)
-      if (b.year !== a.year) return b.year - a.year;
-      if (b.month !== a.month) return b.month - a.month;
-      return (b.id||0) - (a.id||0);
+      if (b.date !== a.date) return b.date > a.date ? 1 : -1;
+      return (b.year * 100 + b.month) - (a.year * 100 + a.month);
     })
     .slice(0, 3);
   const el = document.getElementById('d-log-list');
