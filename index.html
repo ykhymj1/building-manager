@@ -1772,5 +1772,85 @@ loadFromFirebase();
     </div>
   </div>
 </div>
+
+<!-- ★ Firebase 동기화 — 월세관리 앱 -->
+<script type="module">
+import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const FB_CONFIG = {
+  apiKey:            "AIzaSyD9A3cbUujY4agOwB0OL45ccsfRhBXETMw",
+  authDomain:        "mymonth-6cd61.firebaseapp.com",
+  projectId:         "mymonth-6cd61",
+  storageBucket:     "mymonth-6cd61.firebasestorage.app",
+  messagingSenderId: "1067760522796",
+  appId:             "1:1067760522796:web:f97a12c210482e6e8de389"
+};
+
+const app = initializeApp(FB_CONFIG, "building");
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const KEYS = ["rm_tenants", "rm_payments", "rm_logs"];
+let _uid = null, _timer = null;
+
+function badge(msg) {
+  let b = document.getElementById("_bld_b");
+  if (!b) {
+    b = document.createElement("div");
+    b.id = "_bld_b";
+    b.style.cssText = "position:fixed;bottom:80px;right:12px;z-index:9999;background:#0a1628;border:1.5px solid #00ffcc;border-radius:20px;padding:7px 16px;font-size:12px;color:#00ffcc;font-weight:700;font-family:monospace;pointer-events:none;opacity:0;transition:opacity .4s;";
+    document.body.appendChild(b);
+  }
+  b.textContent = "☁️ " + msg;
+  b.style.opacity = "1";
+  clearTimeout(b._t);
+  b._t = setTimeout(() => { b.style.opacity = "0"; }, 3000);
+}
+
+async function backup() {
+  if (!_uid) return;
+  try {
+    const data = { updatedAt: new Date().toISOString() };
+    KEYS.forEach(k => { const v = localStorage.getItem(k); if(v) data[k] = v; });
+    await setDoc(doc(db, "users", _uid, "apps", "building"), data, { merge: true });
+    badge("백업 완료 ✅");
+    console.log("[Building] 백업 완료");
+  } catch(e) {
+    console.warn("[Building] 백업 실패:", e.message);
+  }
+}
+
+const _orig = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(k, v) {
+  _orig(k, v);
+  if (KEYS.includes(k) && _uid) {
+    clearTimeout(_timer);
+    _timer = setTimeout(backup, 3000);
+  }
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { console.log("[Building] 로그인 안 됨"); return; }
+  _uid = user.uid;
+  console.log("[Building] 로그인:", user.email);
+  try {
+    const snap = await getDoc(doc(db, "users", _uid, "apps", "building"));
+    const local = localStorage.getItem("rm_tenants");
+    if (snap.exists() && snap.data()["rm_tenants"] && !local) {
+      const data = snap.data();
+      KEYS.forEach(k => { if(data[k]) _orig(k, data[k]); });
+      badge("데이터 복원됨! 🔄");
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      setTimeout(backup, 2000);
+    }
+  } catch(e) {
+    console.warn("[Building] 오류:", e.message);
+  }
+});
+</script>
+
 </body>
 </html>
