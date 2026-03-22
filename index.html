@@ -475,6 +475,35 @@ html, body {
     <div id="yearly-list"></div>
   </div>
 
+  <!-- ── 납부내역 ── -->
+  <div id="page-income" class="page">
+    <div class="month-row" style="margin-bottom:12px">
+      <button class="month-nav-btn" onclick="changeIncomeYear(-1)">‹</button>
+      <span id="income-year-label" style="font-size:17px;font-weight:900"></span>
+      <button class="month-nav-btn" onclick="changeIncomeYear(1)">›</button>
+    </div>
+
+    <!-- 현재 월정 수입 현황 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px">📋 월 정기 수입 현황 (현재 납부 대상)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:700">🏠 연신내</span>
+        <span id="income-fixed-yeonsin" style="font-size:14px;font-weight:900;color:var(--accent)"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:700">🏢 봉천동 연세</span>
+        <span id="income-fixed-bongcheon" style="font-size:14px;font-weight:900;color:var(--accent)"></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <span style="font-size:14px;font-weight:900">합계</span>
+        <span id="income-fixed-total" style="font-size:16px;font-weight:900;color:var(--yellow)"></span>
+      </div>
+    </div>
+
+    <!-- 월별 실수입 집계 -->
+    <div id="income-list"></div>
+  </div>
+
 </div>
 
 <!-- Bottom Tab Bar -->
@@ -487,7 +516,10 @@ html, body {
     <span class="tab-icon">💰</span>
     <span class="tab-label">납부현황</span>
   </button>
-
+  <button class="tab-item" onclick="showPage('income')">
+    <span class="tab-icon">📈</span>
+    <span class="tab-label">납부내역</span>
+  </button>
   <button class="tab-item" onclick="showPage('tenants')">
     <span class="tab-icon">👥</span>
     <span class="tab-label">세입자</span>
@@ -776,6 +808,7 @@ const topbarActions = {
 
   tenants:   { title:'👥 세입자 정보', sub:'', btn:{label:'+ 추가', fn:'openTenantModal()'} },
   yearly:    { title:'📅 연간 수입', sub:'', btn:null },
+  income:    { title:'📈 납부내역', sub:'', btn:null },
 };
 
 function showPage(p) {
@@ -799,6 +832,7 @@ function showPage(p) {
 
   if (p==='tenants')   renderTenants();
   if (p==='yearly')    renderYearly();
+  if (p==='income')    renderIncome();
 }
 
 // ─── Dashboard ───
@@ -1255,6 +1289,94 @@ function renderYearly() {
   '<div class="yearly-row" style="border-color:var(--accent)"><div class="yr-header"><span class="yr-name" style="color:var(--accent)">연간 합계</span><span class="yr-total" style="font-size:18px">'+W(grand)+'</span></div></div>';
 }
 
+// ─── Income (납부내역) ───
+let incomeYear = new Date().getFullYear();
+
+function changeIncomeYear(d) { incomeYear += d; renderIncome(); }
+
+function renderIncome() {
+  document.getElementById('income-year-label').textContent = incomeYear + '년';
+
+  const today = new Date();
+  const curY = today.getFullYear(), curM = today.getMonth() + 1;
+
+  // ── 월 정기 수입 현황: 현재 달 납부 대상 기준 ──
+  const yeonsinTenants   = tenants.filter(t => t.building === '연신내'     && isPayTarget(t, curY, curM));
+  const bongcheonTenants = tenants.filter(t => t.building === '봉천동 연세' && isPayTarget(t, curY, curM));
+  const fixedYeonsin   = yeonsinTenants.reduce((a, t)   => a + getRentForMonth(t, curY, curM) + t.mgmt, 0);
+  const fixedBongcheon = bongcheonTenants.reduce((a, t) => a + getRentForMonth(t, curY, curM) + t.mgmt, 0);
+  document.getElementById('income-fixed-yeonsin').textContent   = W(fixedYeonsin);
+  document.getElementById('income-fixed-bongcheon').textContent = W(fixedBongcheon);
+  document.getElementById('income-fixed-total').textContent     = W(fixedYeonsin + fixedBongcheon);
+
+  // ── 월별 실수입 집계: 실제 입금일(date) 기준 ──
+  // 해당 연도 내 date를 기준으로 집계
+  const monthlyData = Array.from({length: 12}, (_, i) => ({
+    month: i + 1,
+    yeonsin: 0,
+    bongcheon: 0,
+    total: 0,
+    count: 0
+  }));
+
+  payments.forEach(p => {
+    if (p.type === 'rentfree' || !p.date || p.amount <= 0) return;
+    // 납부한 날짜(date) 기준으로 연도/월 추출
+    const dateStr = p.date; // YYYY-MM-DD
+    const pDateYear  = parseInt(dateStr.slice(0, 4));
+    const pDateMonth = parseInt(dateStr.slice(5, 7));
+    if (pDateYear !== incomeYear) return;
+
+    const t = getTenant(p.tenantId);
+    if (!t) return;
+    const mi = pDateMonth - 1;
+    if (t.building === '연신내') {
+      monthlyData[mi].yeonsin += p.amount;
+    } else if (t.building === '봉천동 연세') {
+      monthlyData[mi].bongcheon += p.amount;
+    }
+    monthlyData[mi].total += p.amount;
+    monthlyData[mi].count++;
+  });
+
+  // 연간 합계
+  const annualYeonsin   = monthlyData.reduce((a, m) => a + m.yeonsin, 0);
+  const annualBongcheon = monthlyData.reduce((a, m) => a + m.bongcheon, 0);
+  const annualTotal     = annualYeonsin + annualBongcheon;
+
+  const el = document.getElementById('income-list');
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">
+      <!-- 헤더 -->
+      <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;background:var(--surface2);padding:10px 12px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text2)">월</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">🏠 연신내</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">🏢 봉천동</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-align:right">합계</div>
+      </div>
+      <!-- 월별 행 -->
+      ${monthlyData.map(m => {
+        const hasData = m.total > 0;
+        const isFuture = (incomeYear > curY) || (incomeYear === curY && m.month > curM);
+        const bg = isFuture ? '' : hasData ? '' : 'background:rgba(220,38,38,.03)';
+        return '<div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;padding:9px 12px;border-bottom:1px solid var(--border);' + bg + '">' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text2)">' + m.month + '월</div>' +
+          '<div style="font-size:12px;font-weight:700;text-align:right;color:' + (m.yeonsin ? 'var(--accent)' : 'var(--text3)') + '">' + (m.yeonsin ? W(m.yeonsin) : '—') + '</div>' +
+          '<div style="font-size:12px;font-weight:700;text-align:right;color:' + (m.bongcheon ? 'var(--accent)' : 'var(--text3)') + '">' + (m.bongcheon ? W(m.bongcheon) : '—') + '</div>' +
+          '<div style="font-size:12px;font-weight:900;text-align:right;color:' + (m.total ? 'var(--text)' : 'var(--text3)') + '">' + (m.total ? W(m.total) : '—') + '</div>' +
+        '</div>';
+      }).join('')}
+      <!-- 연간 합계 행 -->
+      <div style="display:grid;grid-template-columns:40px 1fr 1fr 1fr;padding:11px 12px;background:var(--surface2)">
+        <div style="font-size:12px;font-weight:900;color:var(--text2)">합계</div>
+        <div style="font-size:12px;font-weight:900;text-align:right;color:var(--accent)">${annualYeonsin ? W(annualYeonsin) : '—'}</div>
+        <div style="font-size:12px;font-weight:900;text-align:right;color:var(--accent)">${annualBongcheon ? W(annualBongcheon) : '—'}</div>
+        <div style="font-size:14px;font-weight:900;text-align:right;color:var(--yellow)">${annualTotal ? W(annualTotal) : '—'}</div>
+      </div>
+    </div>
+  `;
+}
+
 // ─── Sheet ───
 function closeSheet(id) { document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.overlay').forEach(o =>
@@ -1557,7 +1679,7 @@ function quickPayFromHistory(tenantId) {
 }
 
 // ─── Swipe Navigation ───
-const PAGE_ORDER = ['dashboard','monthly','log','tenants','yearly'];
+const PAGE_ORDER = ['dashboard','monthly','income','tenants','yearly'];
 let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0;
 
 document.getElementById('scroll-area').addEventListener('touchstart', e => {
@@ -1640,6 +1762,7 @@ function applyMigrations() {
 
 // ─── Init ───
 applyMigrations();
+incomeYear = new Date().getFullYear();
 document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
 populatePaySelect();
 populateLogSelect();
