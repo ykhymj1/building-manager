@@ -758,28 +758,42 @@ function syncFromFirebase() {
   if (!_fbUid || !_fbDb) return;
   const { get, ref } = window._fbSDK;
   setLoginBtn('in');
-  showToast('🔄 Firebase에서 데이터 불러오는 중...');
   get(ref(_fbDb, 'wolse/' + _fbUid + '/data'))
     .then(snap => {
-      if (snap.exists()) {
-        const data = snap.val();
-        if (data.tenants)  tenants  = data.tenants;
-        if (data.payments) payments = data.payments;
-        if (data.logs)     logs     = data.logs;
-        nextId = Math.max(0, ...tenants.map(t=>t.id)) + 1;
-        applyMigrations();
-        localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
-        localStorage.setItem('rm_payments', JSON.stringify(payments));
-        localStorage.setItem('rm_logs',     JSON.stringify(logs));
-        renderDashboard(); renderMonthly(); renderTenants(); renderYearly();
-        showToast('✅ 동기화 완료 (' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}) + ')');
+      // ★ 타임스탬프 비교: Firebase vs 로컬 중 최신 데이터 우선
+      let fbTime = null, localTime = null;
+      if (snap.exists() && snap.val().updatedAt) fbTime = new Date(snap.val().updatedAt).getTime();
+      try {
+        const lt = localStorage.getItem('_wolse_updatedAt');
+        if (lt) localTime = new Date(lt).getTime();
+      } catch(e) {}
+
+      if (snap.exists() && snap.val().tenants) {
+        if (!localTime || !fbTime || fbTime >= localTime) {
+          // Firebase가 최신이거나 로컬 타임스탬프 없음 → Firebase로 복원
+          const data = snap.val();
+          if (data.tenants)  tenants  = data.tenants;
+          if (data.payments) payments = data.payments;
+          if (data.logs)     logs     = data.logs;
+          nextId = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+          applyMigrations();
+          localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
+          localStorage.setItem('rm_payments', JSON.stringify(payments));
+          localStorage.setItem('rm_logs',     JSON.stringify(logs));
+          if (fbTime) localStorage.setItem('_wolse_updatedAt', snap.val().updatedAt);
+          renderDashboard(); renderMonthly(); renderTenants(); renderYearly();
+          showToast('✅ 최신 데이터로 동기화됐어요! (' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}) + ')');
+        } else {
+          // 로컬이 더 최신 → Firebase에 업로드
+          saveToFirebase();
+          showToast('☁️ 로컬 데이터가 최신 → Firebase에 저장 완료!');
+        }
       } else {
-        // 처음 로그인 — 현재 로컬 데이터를 Firebase에 업로드
+        // Firebase에 데이터 없음 → 로컬을 Firebase에 업로드
         saveToFirebase();
         showToast('☁️ 첫 로그인 — 로컬 데이터를 Firebase에 저장했습니다');
       }
       setLoginBtn('synced');
-      setTimeout(() => setLoginBtn('synced'), 2000);
     })
     .catch(err => {
       showToast('⚠️ 동기화 실패: ' + err.message, true);
@@ -790,8 +804,13 @@ function syncFromFirebase() {
 function saveToFirebase() {
   if (!_fbUid || !_fbDb) return;
   const { set, ref } = window._fbSDK;
-  set(ref(_fbDb, 'wolse/' + _fbUid + '/data'), {tenants, payments, logs})
-    .then(() => { setLoginBtn('synced'); })
+  const now = new Date().toISOString();
+  // ★ updatedAt 포함해서 저장 (동기화 비교용)
+  set(ref(_fbDb, 'wolse/' + _fbUid + '/data'), {tenants, payments, logs, updatedAt: now})
+    .then(() => {
+      localStorage.setItem('_wolse_updatedAt', now);
+      setLoginBtn('synced');
+    })
     .catch(() => {});
 }
 
