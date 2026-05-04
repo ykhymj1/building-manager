@@ -775,7 +775,13 @@ function syncFromFirebase() {
           if (data.tenants)  tenants  = data.tenants;
           if (data.payments) payments = data.payments;
           if (data.logs)     logs     = data.logs;
-          nextId = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+          nextId = Math.max(0, ...tenants.map(t=>t.id||0)) + 1;
+          // ★ 다운받은 데이터가 마이그레이션 전 데이터일 수 있으므로,
+          // 박수철(ID 8)에 rentChanges가 없으면 마이그레이션 미적용 데이터로 보고 플래그 리셋
+          const tBak = tenants.find(t => t.id === 8);
+          if (tBak && !Array.isArray(tBak.rentChanges)) {
+            try { localStorage.removeItem('_migration_v2'); } catch(e) {}
+          }
           applyMigrations();
           localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
           localStorage.setItem('rm_payments', JSON.stringify(payments));
@@ -862,7 +868,9 @@ async function restoreSnapshot(dateKey) {
     if (data.tenants)  tenants  = data.tenants;
     if (data.payments) payments = data.payments;
     if (data.logs)     logs     = data.logs || [];
-    nextId = Math.max(0, ...tenants.map(t=>t.id)) + 1;
+    nextId = Math.max(0, ...tenants.map(t=>t.id||0)) + 1;
+    // ★ 백업은 마이그레이션 전 데이터일 수 있으므로 플래그 리셋 후 재적용
+    try { localStorage.removeItem('_migration_v2'); } catch(e) {}
     applyMigrations();
     save();
     renderDashboard(); renderMonthly(); renderTenants(); renderYearly();
@@ -918,6 +926,9 @@ function save() {
   localStorage.setItem('rm_tenants',  JSON.stringify(tenants));
   localStorage.setItem('rm_payments', JSON.stringify(payments));
   localStorage.setItem('rm_logs',     JSON.stringify(logs));
+  // ★ 로컬 타임스탬프를 즉시 갱신 (저장 직후 동기화 비교에서 로컬이 최신임을 보장)
+  // 그렇지 않으면 saveToFirebase 1.5초 지연 동안 다른 기기에서 동기화 시 로컬 변경이 사라질 수 있음
+  try { localStorage.setItem('_wolse_updatedAt', new Date().toISOString()); } catch(e) {}
   if (_fbUid) {
     clearTimeout(_saveTimer);
     setLoginBtn('in');
@@ -927,20 +938,35 @@ function save() {
 function W(n) { return '₩' + n.toLocaleString('ko-KR'); }
 
 // 세입자별 해당 월의 실제 월세 반환 (rentChanges 적용)
+// 세입자별 해당 월의 실제 월세 반환
+// rentChanges 배열: [{from:'YYYY-MM', rent:금액}, ...] 형태로 임대료 변경 이력 저장
+// 가장 최근 from 이하인 변경값을 사용. 없으면 t.rent 사용.
 function getRentForMonth(t, year, month) {
-  if (t.id === 8) {
-    const ym = year * 100 + month;
-    if (ym <= 202512) return 3800000;
-    return 4180000;
+  const ym = year * 100 + month;
+  if (Array.isArray(t.rentChanges) && t.rentChanges.length) {
+    // from 기준 오름차순 정렬 후 ym 이하인 마지막 값 사용
+    const sorted = t.rentChanges
+      .filter(rc => rc && rc.from && typeof rc.rent === 'number')
+      .map(rc => {
+        const [y, m] = rc.from.split('-').map(Number);
+        return { ym: y * 100 + m, rent: rc.rent };
+      })
+      .sort((a, b) => a.ym - b.ym);
+    let activeRent = null;
+    for (const rc of sorted) {
+      if (rc.ym <= ym) activeRent = rc.rent;
+      else break;
+    }
+    if (activeRent !== null) return activeRent;
   }
   return t.rent;
 }
 
-// 메모 기본값: 김정해(10), 전훈철(9), 허성은(5) → 당월 월세 (선불식)
-// 나머지 후불 세입자 → 전달 월세 (N+1월에 N월치 납부)
-const SAME_MONTH_IDS = [5, 6, 9, 10]; // 허성은, 미스터피자, 전훈철, 김정해: 받는달=해당월 월세
+// 메모 기본값: payType이 '선불' → 당월 / '후불' → 전달
 function getDefaultMemo(tenantId, year, month) {
-  if (SAME_MONTH_IDS.includes(tenantId)) {
+  const t = getTenant(tenantId);
+  const payType = (t && t.payType) || '후불';
+  if (payType === '선불') {
     return year + "년 " + month + "월 월세";
   } else {
     var prevYear = year, prevMonth = month - 1;
@@ -1052,10 +1078,13 @@ function importData(event) {
       tenants  = data.tenants;
       payments = data.payments;
       logs     = data.logs || [];
+      // ★ nextId 재계산 (가져온 데이터의 최대 ID + 1)
+      nextId = Math.max(0, ...tenants.map(t=>t.id||0)) + 1;
       save();
       renderDashboard();
       renderMonthly();
       renderTenants();
+      renderYearly();
       showToast('✓ 데이터를 불러왔습니다');
     } catch(err) {
       showToast('파일을 읽는 중 오류가 발생했습니다', true);
@@ -1266,6 +1295,14 @@ function openPayModal() {
   document.getElementById('modal-date').value   = new Date().toISOString().split('T')[0];
   document.getElementById('pay-modal').classList.add('show');
 }
+// ★ 안전한 새 ID 생성기 (Date.now + 카운터로 1ms 안 충돌 방지)
+let _idCounter = 0;
+function nextPaymentId() {
+  _idCounter = (_idCounter + 1) % 1000;
+  // 1000으로 나눈 나머지를 곱해서 같은 ms 안 100건까지 충돌 안 남
+  return Date.now() * 1000 + _idCounter;
+}
+
 function confirmPay() {
   const tenantId = parseInt(document.getElementById('modal-tenant').value);
   const date     = document.getElementById('modal-date').value;
@@ -1274,9 +1311,14 @@ function confirmPay() {
   const memo     = document.getElementById('modal-memo').value;
   if (!tenantId||!date||!amount) { showToast('날짜와 금액을 입력해주세요', true); return; }
 
+  // ★ 기존 payment 중 렌트프리는 보존, 일반 입금만 교체
+  const existing = payments.find(p => p.tenantId===tenantId && p.year===curYear && p.month===curMonth);
+  if (existing && existing.type === 'rentfree') {
+    if (!confirm(`${curYear}년 ${curMonth}월은 렌트프리로 처리되어 있습니다.\n렌트프리를 해제하고 일반 입금으로 변경할까요?`)) return;
+  }
   payments = payments.filter(p=>!(p.tenantId===tenantId&&p.year===curYear&&p.month===curMonth));
-  payments.push({id:Date.now(), tenantId, year:curYear, month:curMonth, date, amount, bank, memo});
-  logs.push({id:Date.now()+1, date, tenantId, amount, bank, memo});
+  payments.push({id:nextPaymentId(), tenantId, year:curYear, month:curMonth, date, amount, bank, memo});
+  logs.push({id:nextPaymentId(), date, tenantId, amount, bank, memo});
   save();
   closeSheet('pay-modal');
   renderMonthly();
@@ -1314,6 +1356,9 @@ function renderTenants() {
   el.innerHTML = list.map((t,idx) => {
     const daysLeft = Math.ceil((new Date(t.end)-new Date())/86400000);
     const exp = daysLeft<90?`<span style="color:var(--yellow);font-size:11px">⚠ ${daysLeft}일 후 만료</span>`:'';
+    // ★ 현재 시점의 실제 임대료 표시 (rentChanges 반영)
+    const today = new Date();
+    const curRent = getRentForMonth(t, today.getFullYear(), today.getMonth() + 1);
     return `<div class="tenant-card" draggable="true" data-id="${t.id}" data-idx="${idx}"
       ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropTenant(event)" ondragend="dragEnd(event)">
       <div class="tc-header">
@@ -1323,10 +1368,10 @@ function renderTenants() {
         </div>
         <span class="tc-building">${t.building} ${t.unit}</span>
       </div>
-      <div class="tc-row"><span class="tc-key">연락처</span><span class="tc-val">${t.phone}</span></div>
-      <div class="tc-row"><span class="tc-key">월세</span><span class="tc-val">${W(t.rent)}</span></div>
-      <div class="tc-row"><span class="tc-key">관리비</span><span class="tc-val">${W(t.mgmt)}</span></div>
-      <div class="tc-row"><span class="tc-key">보증금</span><span class="tc-val">${W(t.deposit)}</span></div>
+      <div class="tc-row"><span class="tc-key">연락처</span><span class="tc-val">${t.phone||''}</span></div>
+      <div class="tc-row"><span class="tc-key">월세</span><span class="tc-val">${W(curRent)}${curRent!==t.rent?` <span style="font-size:11px;color:var(--text3)">(기본 ${W(t.rent)})</span>`:''}</span></div>
+      <div class="tc-row"><span class="tc-key">관리비</span><span class="tc-val">${W(t.mgmt||0)}</span></div>
+      <div class="tc-row"><span class="tc-key">보증금</span><span class="tc-val">${W(t.deposit||0)}</span></div>
       <div class="tc-row"><span class="tc-key">계약기간</span><span class="tc-val" style="font-size:11px">${t.start}~${t.end} ${exp}</span></div>
       <div class="tc-row"><span class="tc-key">납부방식</span><span class="tc-val">${t.payType||'후불'} · 매월 ${t.payDay||1}일${t.rfMonths>0?` · 계약RF ${t.rfMonths}개월`:''}</span></div>
       ${t.bank?`<div class="tc-row"><span class="tc-key">입금은행</span><span class="tc-val">🏦 ${t.bank}</span></div>`:''}
@@ -1672,7 +1717,8 @@ function openTenantHistory(tenantId) {
   }
 
   const totalUnpaid = unpaidMonths.length;
-  const totalUnpaidAmt = totalUnpaid * (t.rent + t.mgmt); // (개별 월별 금액은 각 셀에서 계산)
+  // ★ 미납 누적액: 각 미납 월의 실제 임대료(getRentForMonth) + mgmt 합산 (변동 임대료 정확히 반영)
+  const totalUnpaidAmt = unpaidMonths.reduce((sum, ym) => sum + getRentForMonth(t, ym.year, ym.month) + (t.mgmt || 0), 0);
 
   const byYear = {};
   months.forEach(({year, month}) => {
@@ -1814,10 +1860,12 @@ function saveHistCellEdit() {
 
   const existing = getPayment(tenantId, year, month);
   if (existing) {
+    // ★ 기존 데이터에 type 'rentfree'가 있어도 사용자가 일반 입금으로 변경한 것이므로
+    // type을 제거. 단, 데이터 보존을 위해 명시적으로 처리
     existing.date=date; existing.amount=amount; existing.bank=bank; existing.memo=memo;
+    delete existing.type;
   } else {
-    const nid = (payments.reduce((mx,p)=>Math.max(mx,p.id),0))+1;
-    payments.push({id:nid, tenantId, year, month, date, amount, bank, memo});
+    payments.push({id:nextPaymentId(), tenantId, year, month, date, amount, bank, memo});
   }
   save();
   closeSheet('hist-cell-edit-modal');
@@ -1844,8 +1892,7 @@ function toggleSpecialRF(tenantId, year, month) {
   } else {
     // 기존 입금기록 제거 후 렌트프리로
     payments = payments.filter(p=>!(p.tenantId===tenantId&&p.year===year&&p.month===month));
-    const nid = (payments.reduce((mx,p)=>Math.max(mx,p.id),0))+1;
-    payments.push({id:nid, tenantId, year, month, date:`${year}-${String(month).padStart(2,'0')}-01`, amount:0, bank:'렌트프리', memo:'렌트프리', type:'rentfree'});
+    payments.push({id:nextPaymentId(), tenantId, year, month, date:`${year}-${String(month).padStart(2,'0')}-01`, amount:0, bank:'렌트프리', memo:'렌트프리', type:'rentfree'});
     showToast(`🆓 ${year}년 ${month}월 렌트프리 지정됨`);
   }
   save();
@@ -1880,11 +1927,8 @@ document.getElementById('scroll-area').addEventListener('touchend', e => {
 }, {passive: true});
 
 // ─── Exit Confirmation ───
-window.addEventListener('beforeunload', e => {
-  e.preventDefault();
-  e.returnValue = '앱을 종료할까요?';
-  return '앱을 종료할까요?';
-});
+// ★ beforeunload 종료 확인은 제거: 모바일에선 무시되고 데스크톱에선 새로고침마다 귀찮음
+// 데이터는 save() 호출 시 즉시 localStorage에 저장되므로 손실 위험 없음
 
 // 안드로이드 뒤로가기 버튼
 window.addEventListener('popstate', () => {
@@ -1904,40 +1948,34 @@ window.addEventListener('popstate', () => {
 history.pushState(null,'',location.href);
 
 // ─── 데이터 마이그레이션 (init + Firebase 로드 후 매번 실행) ───
+// ─── 데이터 마이그레이션 ───
+// 한 번만 실행되어야 하는 일회성 정리 작업.
+// localStorage에 _migration_v2 플래그가 있으면 이미 적용된 것이므로 건너뜀.
+// 이렇게 하지 않으면 사용자가 화면에서 수정한 값이 매번 강제로 덮어씌워지는 버그가 발생함.
 function applyMigrations() {
-  // 1. 박수철 월세 금액 보정
+  // 이미 마이그레이션이 적용된 경우 건너뛰기 (사용자 데이터 보호)
+  let migDone = false;
+  try { migDone = localStorage.getItem('_migration_v2') === 'done'; } catch(e) {}
+  if (migDone) return;
+
+  // 1. 박수철(ID 8) 임대료 변경 이력을 rentChanges로 이관 (한 번만)
+  //    - 2026-01부터 4,180,000원 (이전엔 3,800,000원)
+  const tBak = tenants.find(t => t.id === 8);
+  if (tBak && !Array.isArray(tBak.rentChanges)) {
+    tBak.rentChanges = [
+      { from: '2022-01', rent: 3800000 },
+      { from: '2026-01', rent: 4180000 }
+    ];
+  }
+  // 2. 박수철 과거 payment 중 amount가 옛 임대료(3,800,000)인데 2026-01 이후인 건 보정
   payments.forEach(p => {
-    if (p.tenantId === 8) {
+    if (p.tenantId === 8 && p.amount === 3800000) {
       const ym = p.year * 100 + p.month;
-      if (p.amount === 3800000 && ym >= 202601) p.amount = 4180000;
+      if (ym >= 202601) p.amount = 4180000;
     }
   });
-  // 2. 세입자 start·bank 보정 (표시 기준만, 실제 데이터 삭제 안 함)
-  const correctStarts = {
-    1:'2020-12-01', 2:'2025-05-10', 3:'2020-04-12', 4:'2015-08-17',
-    5:'2025-12-17', 6:'2021-08-01', 7:'2022-10-10', 8:'2022-01-01',
-    9:'2023-06-01', 10:'2023-05-31'
-  };
-  const correctBanks = {9:'카카오뱅크', 10:'카카오뱅크'};
-  tenants.forEach(t => {
-    if (correctStarts[t.id]) t.start = correctStarts[t.id];
-    if (correctBanks[t.id]) t.bank = correctBanks[t.id];
-  });
-  // 3. 렌트프리 레코드 없으면 추가
-  const rfNeeded = [
-    {tenantId:5,  year:2026, month:1,  date:'2026-01-17', memo:'2026년 1월 렌트프리'},
-    {tenantId:6,  year:2025, month:10, date:'2025-10-01', memo:'2025년 10월 렌트프리'},
-    {tenantId:10, year:2023, month:6,  date:'2023-06-01', memo:'2023년 6월 렌트프리'},
-    {tenantId:10, year:2023, month:7,  date:'2023-07-01', memo:'2023년 7월 렌트프리'},
-  ];
-  rfNeeded.forEach(rf => {
-    if (!payments.find(p => p.tenantId===rf.tenantId && p.year===rf.year && p.month===rf.month)) {
-      payments.push({id:Date.now()+Math.random(), tenantId:rf.tenantId, year:rf.year, month:rf.month,
-        date:rf.date, amount:0, bank:'렌트프리', memo:rf.memo, type:'rentfree'});
-    }
-  });
-  // ※ 계약 전 payment 삭제 로직 제거: 실제 입력된 데이터 보호
-  // 화면 표시는 isPayTarget()으로 처리하므로 데이터는 건드리지 않음
+  // 3. 마이그레이션 완료 플래그 저장 (다시는 실행되지 않도록)
+  try { localStorage.setItem('_migration_v2', 'done'); } catch(e) {}
 }
 
 // ─── Init ───
