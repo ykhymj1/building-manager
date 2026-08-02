@@ -237,7 +237,7 @@ html, body {
 .tc-row:last-of-type { border-bottom: none; }
 .tc-key { font-size: 12px; color: var(--text2); }
 .tc-val { font-size: 13px; font-weight: 600; text-align: right; }
-.tc-actions { display: flex; gap: 8px; margin-top: 12px; }
+.tc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .tc-btn {
   flex: 1; border-radius: 10px; padding: 10px;
   font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font);
@@ -676,6 +676,22 @@ html, body {
     </div>
     <button class="btn-full" id="tenant-confirm-btn" onclick="saveTenant()">추가</button>
     <button class="btn-full" style="background:var(--surface2);color:var(--text2);margin-top:8px" onclick="closeSheet('tenant-modal')">취소</button>
+  </div>
+</div>
+
+<!-- 📎 계약서 보관 모달 -->
+<div class="overlay" id="contract-modal">
+  <div class="sheet" style="max-height:88vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="contract-title" style="margin-bottom:6px">📎 계약서 보관</div>
+    <div id="contract-sub" style="font-size:12px;color:var(--text2);margin-bottom:14px"></div>
+    <div id="contract-list" style="min-height:40px">불러오는 중...</div>
+    <input type="file" id="contract-file-input" accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf" style="display:none">
+    <button class="btn-full" style="background:var(--green)" onclick="triggerContractUpload()">➕ 계약서 업로드 (추가·갱신)</button>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.7">
+      PDF · JPG · PNG 저장 가능 · 사진은 자동 압축돼 용량을 아껴요<br>계약 갱신 시 계속 추가로 올릴 수 있어요
+    </div>
+    <button class="btn-full" style="background:var(--surface2);color:var(--text2);margin-top:10px" onclick="closeSheet('contract-modal')">닫기</button>
   </div>
 </div>
 
@@ -1380,6 +1396,7 @@ function renderTenants() {
         <button class="tc-btn edit" onclick="openEditTenant(${t.id})">✏️ 수정</button>
         <button class="tc-btn del"  onclick="deleteTenant(${t.id})">🗑 삭제</button>
         <button class="tc-btn" style="background:rgba(79,142,247,.1);color:var(--accent);border:1px solid rgba(79,142,247,.2)" onclick="openTenantHistory(${t.id})">📋 납부이력</button>
+        <button class="tc-btn" style="background:rgba(5,150,105,.10);color:var(--green);border:1px solid rgba(5,150,105,.25)" onclick="openTenantContracts(${t.id})">📎 계약서</button>
       </div>
     </div>`;
   }).join('');
@@ -1439,6 +1456,11 @@ function deleteTenant(id) {
     tenants  = tenants.filter(x=>x.id!==id);
     payments = payments.filter(p=>p.tenantId!==id);
     logs     = logs.filter(l=>l.tenantId!==id);
+    // 해당 세입자의 계약서 파일도 함께 정리 (저장공간 절약)
+    if (_fbUid && _fbDb && window._fbSDK) {
+      try { window._fbSDK.set(window._fbSDK.ref(_fbDb, 'wolse/' + _fbUid + '/contracts/' + id), null); } catch(e) {}
+    }
+    delete _contractCache[id];
     save(); renderTenants(); renderDashboard();
     closeSheet('del-confirm-modal');
     showToast('삭제됐습니다');
@@ -1476,6 +1498,254 @@ function saveTenant() {
   }
   save(); closeSheet('tenant-modal'); renderTenants(); renderDashboard();
   populatePaySelect(); populateLogSelect();
+}
+
+/* ═══════════ 📎 계약서 보관 ═══════════
+   저장 위치 : wolse/{uid}/contracts/{tenantId}  (기존 보안규칙 그대로 적용 → Firebase 콘솔 수정 불필요)
+   저장공간  : 사진(JPG/PNG)은 업로드 시 자동 축소·압축, 평소 동기화/백업에는 포함되지 않음(앱 속도 유지)
+   무료      : 이미 쓰는 Firebase 무료(Spark) 공간만 사용 (추가 비용 없음)
+*/
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const CONTRACT_MAX_IMG_DIM = 1400;                 // 사진 긴 변 최대 픽셀 (초과 시 축소)
+const CONTRACT_IMG_QUALITY = 0.72;                 // JPEG 압축 품질 (0~1)
+const CONTRACT_MAX_BYTES   = 4.5 * 1024 * 1024;    // 파일 1개 최대 저장 용량
+
+let _contractTenantId = null;
+let _cCounter = 0;
+const _contractCache = {}; // { tenantId: [ {id,name,type,size,label,uploadedAt,data}, ... ] }
+
+function nextContractId() { return Date.now() * 1000 + (_cCounter++ % 1000); }
+
+function fmtSize(bytes) {
+  if (bytes == null) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+function approxBytesOfDataURL(dataurl) {
+  const i = dataurl.indexOf(',');
+  const b64 = i >= 0 ? dataurl.slice(i + 1) : dataurl;
+  return Math.floor(b64.length * 3 / 4);
+}
+
+function dataURLtoBlob(dataurl) {
+  const parts = dataurl.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], { type: mime });
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// 사진 축소 + JPEG 압축 → 저장 용량 대폭 절약
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const maxDim = CONTRACT_MAX_IMG_DIM;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else        { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', CONTRACT_IMG_QUALITY) });
+      };
+      img.onerror = () => reject(new Error('이미지 처리 실패'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function openTenantContracts(id) {
+  const t = getTenant(id);
+  if (!t) return;
+  _contractTenantId = id;
+  document.getElementById('contract-title').textContent = '📎 ' + t.name + ' 계약서';
+  document.getElementById('contract-sub').textContent = t.building + ' ' + t.unit;
+  document.getElementById('contract-modal').classList.add('show');
+  const listEl = document.getElementById('contract-list');
+
+  if (!_fbUid) {
+    listEl.innerHTML =
+      '<div style="text-align:center;padding:24px 0;color:var(--text2);font-size:13px;line-height:1.7">'
+      + '☁️ 계약서 보관은 <b>로그인 후</b> 이용할 수 있어요.<br>파일은 내 Firebase 계정에만 안전하게 저장됩니다.'
+      + '</div>'
+      + '<button class="btn-full" onclick="startGoogleLogin()">🔑 로그인하기</button>';
+    return;
+  }
+  listEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--text3)">불러오는 중...</div>';
+  try {
+    const arr = await loadContracts(id);
+    renderContractList(id, arr);
+  } catch (e) {
+    listEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--red)">불러오기 실패: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+async function loadContracts(tenantId) {
+  if (!_fbUid || !_fbDb) return [];
+  const { get, ref } = window._fbSDK;
+  const snap = await get(ref(_fbDb, 'wolse/' + _fbUid + '/contracts/' + tenantId));
+  let arr = snap.exists() ? snap.val() : [];
+  if (!Array.isArray(arr)) arr = Object.values(arr || {});
+  _contractCache[tenantId] = arr;
+  return arr;
+}
+
+async function saveContracts(tenantId, arr) {
+  if (!_fbUid || !_fbDb) return;
+  const { set, ref } = window._fbSDK;
+  await set(ref(_fbDb, 'wolse/' + _fbUid + '/contracts/' + tenantId), arr);
+  _contractCache[tenantId] = arr;
+}
+
+function renderContractList(tenantId, arr) {
+  const listEl = document.getElementById('contract-list');
+  if (!arr || !arr.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px">아직 등록된 계약서가 없어요.<br>아래 버튼으로 첫 계약서를 올려보세요!</div>';
+    return;
+  }
+  const totalBytes = arr.reduce((a, c) => a + (c.size || 0), 0);
+  listEl.innerHTML = arr.map(c => {
+    const isPdf = (c.type || '').indexOf('pdf') >= 0;
+    const icon = isPdf ? '📄' : '🖼️';
+    const dateStr = c.uploadedAt ? c.uploadedAt.slice(0, 10) : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)">'
+      + '<span style="font-size:22px">' + icon + '</span>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(c.name) + '</div>'
+      +   '<div style="font-size:11px;color:var(--text2);margin-top:3px">'
+      +     '<span style="background:rgba(37,99,235,.1);color:var(--accent);padding:1px 7px;border-radius:6px;font-weight:700">' + escHtml(c.label || '계약서') + '</span> '
+      +     dateStr + ' · ' + fmtSize(c.size) + '</div>'
+      + '</div>'
+      + '<button onclick="viewContract(' + tenantId + ',' + c.id + ')" style="background:rgba(37,99,235,.1);color:var(--accent);border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer">보기</button>'
+      + '<button onclick="deleteContract(' + tenantId + ',' + c.id + ')" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px">🗑</button>'
+      + '</div>';
+  }).join('')
+  + '<div style="text-align:right;font-size:11px;color:var(--text3);margin-top:8px">총 ' + arr.length + '건 · ' + fmtSize(totalBytes) + '</div>';
+}
+
+function triggerContractUpload() {
+  if (!_fbUid) { showToast('로그인 후 이용해주세요', true); return; }
+  const input = document.getElementById('contract-file-input');
+  input.value = '';
+  input.onchange = handleContractFileChange;
+  input.click();
+}
+
+async function handleContractFileChange(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const tenantId = _contractTenantId;
+  const nameLower = (file.name || '').toLowerCase();
+  const isImage = (file.type || '').indexOf('image') >= 0 || /\.(png|jpg|jpeg)$/.test(nameLower);
+  const isPdf   = (file.type || '').indexOf('pdf') >= 0 || /\.pdf$/.test(nameLower);
+  if (!isImage && !isPdf) { showToast('PDF, JPG, PNG 파일만 올릴 수 있어요', true); return; }
+
+  showToast('처리 중...');
+  try {
+    let dataUrl, finalType, finalName = file.name;
+    if (isImage) {
+      const r = await compressImage(file);
+      dataUrl = r.dataUrl;
+      finalType = 'image/jpeg';
+      finalName = file.name.replace(/\.(png|jpg|jpeg)$/i, '') + '.jpg';
+    } else {
+      if (file.size > CONTRACT_MAX_BYTES) {
+        showToast('PDF가 너무 커요 (' + fmtSize(file.size) + '). 4MB 이하로 올려주세요', true);
+        return;
+      }
+      dataUrl = await readFileAsDataURL(file);
+      finalType = 'application/pdf';
+    }
+    const bytes = approxBytesOfDataURL(dataUrl);
+    if (bytes > CONTRACT_MAX_BYTES) {
+      showToast('용량이 너무 커요 (' + fmtSize(bytes) + '). 더 작은 파일로 올려주세요', true);
+      return;
+    }
+
+    const arr = (_contractCache[tenantId] || await loadContracts(tenantId)).slice();
+    const defaultLabel = arr.length === 0 ? '최초계약' : '갱신';
+    let label = prompt('계약서 종류를 입력하세요\n(예: 최초계약, 갱신, 재계약)', defaultLabel);
+    if (label === null) return; // 사용자가 취소
+    label = (label.trim() || defaultLabel);
+
+    arr.push({
+      id: nextContractId(),
+      name: finalName,
+      type: finalType,
+      size: bytes,
+      label: label,
+      uploadedAt: new Date().toISOString(),
+      data: dataUrl
+    });
+    await saveContracts(tenantId, arr);
+    renderContractList(tenantId, arr);
+    showToast('✅ 계약서가 저장됐어요 (' + fmtSize(bytes) + ')');
+  } catch (err) {
+    showToast('저장 실패: ' + err.message, true);
+  }
+}
+
+function viewContract(tenantId, cid) {
+  const arr = _contractCache[tenantId] || [];
+  const c = arr.find(x => x.id === cid);
+  if (!c) { showToast('파일을 찾을 수 없어요', true); return; }
+  try {
+    const blob = dataURLtoBlob(c.data);
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      const a = document.createElement('a');
+      a.href = url; a.download = c.name;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) {
+    showToast('열기 실패: ' + e.message, true);
+  }
+}
+
+async function deleteContract(tenantId, cid) {
+  const arr = (_contractCache[tenantId] || []).slice();
+  const c = arr.find(x => x.id === cid);
+  if (!c) return;
+  if (!confirm('"' + (c.label || '') + ' · ' + c.name + '" 계약서를 삭제할까요?\n삭제 후에는 되돌릴 수 없어요.')) return;
+  const newArr = arr.filter(x => x.id !== cid);
+  try {
+    await saveContracts(tenantId, newArr);
+    renderContractList(tenantId, newArr);
+    showToast('삭제됐어요');
+  } catch (e) {
+    showToast('삭제 실패: ' + e.message, true);
+  }
 }
 
 // ─── Yearly ───
